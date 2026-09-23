@@ -1,0 +1,34 @@
+{
+  "name": "slidev-dotnet",
+  "type": "module",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "slidev index.md",
+    "build": "slidev build index.md",
+    "ch01": "slidev ch01-dotnet-intro.md",
+    "ch02": "slidev ch02-csharp-basics.md",
+    "ch03": "slidev ch03-linq.md",
+    "ch04": "slidev ch04-mvc-concepts.md",
+    "ch05": "slidev ch05-crud.md",
+    "ch06": "slidev ch06-dependency-injection.md",
+    "ch07": "slidev ch07-layered-architecture.md",
+    "ch08": "slidev ch08-product.md",
+    "ch09": "slidev ch09-identity.md",
+    "ch10": "slidev ch10-cart-order.md",
+    "export:all": "node scripts/export-all.mjs"
+  },
+  "dependencies": {
+    "@slidev/cli": "^52.14.2",
+    "@slidev/theme-default": "latest",
+    "slidev-theme-penguin": "^2.3.1",
+    "vue": "^3.5.29"
+  },
+  "devDependencies": {
+    "@iconify-json/carbon": "^1.2.20",
+    "@iconify-json/logos": "^1.2.11",
+    "@iconify-json/mdi": "^1.2.3",
+    "pdf-lib": "^1.17.1",
+    "playwright-chromium": "^1.59.1"
+  }
+}
