@@ -192,6 +192,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 -->
 
 ---
+zoom: 0.95
+---
 
 # Step 3：Program.cs 註冊 Identity
 
@@ -231,6 +233,8 @@ ConfigureApplicationCookie 設定登入頁、登出頁和權限不足頁的網�
 Pipeline 的部分，UseAuthentication 一定要在 UseAuthorization 之前。
 -->
 
+---
+zoom: 0.95
 ---
 
 # Step 4：建立 Identity 資料表
@@ -347,6 +351,8 @@ Scaffold 是鷹架的意思，就是用工具自動產生程式碼。我們安�
 補充一下，.NET 9 之後也有新的互動式工具 dotnet scaffold，操作起來更直覺，大家可以試試看。
 -->
 
+---
+zoom: 0.8
 ---
 
 # 導覽列加入登入狀態：_LoginPartial
@@ -598,6 +604,8 @@ public static class SD
 -->
 
 ---
+zoom: 0.8
+---
 
 # Step 2：啟動時建立角色與管理員帳號
 
@@ -659,6 +667,8 @@ using (var scope = app.Services.CreateScope())
 這裡有一個第六章的觀念：DbContext 和 UserManager 都是 Scoped 服務，每個 HTTP 請求一個。但網站啟動的時候還沒有任何請求，所以我們要用 CreateScope 自己建立一個範圍，在這個範圍裡取得服務，用完之後 using 會自動釋放。
 -->
 
+---
+zoom: 0.85
 ---
 
 # Step 4：用角色限制存取
@@ -820,6 +830,8 @@ ApplicationUser 放在 Models 專案，因為 IdentityUser 屬於 Microsoft.Exte
 -->
 
 ---
+zoom: 0.9
+---
 
 # 把 IdentityUser 全部換成 ApplicationUser
 
@@ -903,6 +915,8 @@ Register 頁面的 PageModel 用 primary constructor 注入 UserManager、SignIn
 OnGetAsync 對應 GET 請求，就像 Controller 的 GET Action。我們在這裡把所有角色轉成 SelectListItem，放進 Input.RoleList。
 -->
 
+---
+zoom: 0.75
 ---
 
 # 客製化 Register 頁面 — 建立使用者
@@ -1109,6 +1123,8 @@ public class StoreController(IUnitOfWork unitOfWork) : Controller
 -->
 
 ---
+zoom: 0.9
+---
 
 # 註冊員工時選擇分店
 
@@ -1226,6 +1242,7 @@ layout: default
 -->
 
 ---
+zoom: 0.65
 layout: default
 ---
 

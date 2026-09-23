@@ -108,6 +108,8 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
+zoom: 0.95
+---
 
 # 在 ASP.NET Core 中練習建立 Product
 
@@ -400,6 +402,8 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
+zoom: 0.95
+---
 
 # 在 ASP.NET Core 中練習建立關聯
 
@@ -641,6 +645,8 @@ ViewBag.CategoryList = categories.Select(c => new SelectListItem
 -->
 
 ---
+zoom: 0.95
+---
 
 # 方式三：ViewModel（推薦）
 
@@ -863,6 +869,8 @@ GET 的 Upsert 先建立 ViewModel 並填好分類清單。
 -->
 
 ---
+zoom: 0.8
+---
 
 # Upsert View
 
@@ -902,6 +910,8 @@ Upsert View 用 isEdit 變數判斷目前是新增還是編輯，標題和按鈕
 注意 form 標籤加上了 enctype="multipart/form-data"，這是上傳檔案一定要加的設定，否則檔案不會被送出。檔案欄位的 name 叫 file，等一下 POST 的參數名稱要一樣。
 -->
 
+---
+zoom: 0.95
 ---
 
 # 在 ASP.NET Core 中練習 Upsert — POST
@@ -1054,6 +1064,8 @@ public class ProductController(IUnitOfWork unitOfWork, IWebHostEnvironment env) 
 IWebHostEnvironment 是框架內建的服務，WebRootPath 就是 wwwroot 的實體路徑。它已經註冊在 DI 容器裡了，所以我們只要在 ProductController 的建構子多加一個參數，就能注入使用。這就是第六章學的 DI。
 -->
 
+---
+zoom: 0.9
 ---
 
 # 在 ASP.NET Core 中練習儲存圖片
@@ -1284,6 +1296,8 @@ region 是用來摺疊程式碼的標記，方便把 API 集中在一起。
 -->
 
 ---
+zoom: 0.95
+---
 
 # Step 2：Index View 引入 DataTables
 
@@ -1314,6 +1328,8 @@ region 是用來摺疊程式碼的標記，方便把 API 集中在一起。
 在 Scripts 區塊引入 DataTables 的 CSS 和 JS，我們使用 Bootstrap 5 的樣式版本，跟網站風格一致。SweetAlert2 是一個漂亮的確認對話框套件，等一下刪除時會用到。最後引入我們自己寫的 product.js。
 -->
 
+---
+zoom: 0.95
 ---
 
 # Step 3：product.js 設定 DataTable
@@ -1351,6 +1367,8 @@ new DataTable 的第一個參數是表格的選擇器，第二個參數是設定
 language 載入繁體中文的語系檔，搜尋框、分頁按鈕就會變成中文。
 -->
 
+---
+zoom: 0.85
 ---
 
 # Step 4：用 API 刪除商品
@@ -1503,6 +1521,8 @@ Details 顯示單一商品的詳細資訊，找不到就回傳 404。
 -->
 
 ---
+zoom: 0.85
+---
 
 # 首頁 View：Bootstrap Card
 
@@ -1607,6 +1627,7 @@ Index 加上 int? categoryId 參數。filter 可以寫成 p => p.Stock > 0 && (c
 -->
 
 ---
+zoom: 0.95
 layout: default
 ---
 
@@ -1663,6 +1684,7 @@ layout: default
 -->
 
 ---
+zoom: 0.9
 layout: default
 ---
 

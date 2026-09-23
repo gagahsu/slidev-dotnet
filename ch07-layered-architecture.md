@@ -103,6 +103,8 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
+zoom: 0.95
+---
 
 # 目前的問題：Controller 什麼都做
 
@@ -159,6 +161,8 @@ CategoryController 直接使用 DbContext，查詢邏輯都寫在 Controller 裡
 「分層架構就是依照職責，把程式分成幾個層次，每一層只跟相鄰的層溝通」。第四章補充過，MVC 就是展示層的實作方式。
 -->
 
+---
+zoom: 0.75
 ---
 
 # EShop 的分層與相依方向
@@ -550,6 +554,8 @@ Update 沒有放在泛型介面裡，因為每個實體更新的方式可能不�
 -->
 
 ---
+zoom: 0.85
+---
 
 # Step 2：實作 Repository&lt;T&gt; — 查詢
 
@@ -817,6 +823,8 @@ UnitOfWork 在建構時，把同一個 DbContext 傳給每一個 Repository，�
 -->
 
 ---
+zoom: 0.95
+---
 
 # 改寫 CategoryController
 
@@ -853,6 +861,8 @@ public class CategoryController(IUnitOfWork unitOfWork) : Controller
 大家比較一下改寫前後：Controller 裡完全看不到 DbContext、DbSet、ToListAsync 這些 EF Core 的東西了，只剩下「要做什麼」的商業流程，這就是分層和封裝的效果。
 -->
 
+---
+zoom: 0.8
 ---
 
 # 改寫 CategoryController — Edit 與 Delete

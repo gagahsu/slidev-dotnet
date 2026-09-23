@@ -372,6 +372,8 @@ Required、MaxLength、Range 這些 Data Annotation 有兩個作用：一是資�
 -->
 
 ---
+zoom: 0.95
+---
 
 # Step 5：建立 DbContext
 
@@ -593,6 +595,8 @@ Index 方法裡，db.Categories 就是資料表，後面串接 OrderBy 和 ToLis
 -->
 
 ---
+zoom: 0.9
+---
 
 # 建立 Index View
 
@@ -738,6 +742,8 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
+zoom: 0.85
+---
 
 # 新增資料的流程
 
@@ -799,6 +805,8 @@ ModelState.IsValid 會根據 Model 上的 Data Annotation 檢查資料是否合�
 ValidateAntiForgeryToken 是防止 CSRF 攻擊的機制，表單的 Tag Helper 會自動產生對應的 token。
 -->
 
+---
+zoom: 0.95
 ---
 
 # 建立 Create View
@@ -1482,6 +1490,8 @@ OrderByDescending(a => a.IsPinned) 會讓 true 排在前面，也就是置頂的
 DateOnly 是 .NET 6 之後的型別，只有日期沒有時間，EF Core 會對應到 SQL Server 的 date 欄位。
 -->
 
+---
+zoom: 0.9
 ---
 
 # 總結

@@ -107,6 +107,8 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
+zoom: 0.9
+---
 
 # 什麼是購物車模型？
 
@@ -197,6 +199,8 @@ dotnet ef database update --project EShop.DataAccess --startup-project EShop.Web
 接著就是大家已經很熟悉的流程：Repository、UnitOfWork、DbSet、Migration。這已經是我們第五次做這件事了。
 -->
 
+---
+zoom: 0.75
 ---
 
 # 商品詳細頁：加入購物車
@@ -376,6 +380,8 @@ Index 查出這位會員的所有購物車品項，includeProperties 載入商�
 -->
 
 ---
+zoom: 0.75
+---
 
 # 購物車頁面 View
 
@@ -413,6 +419,8 @@ else
 有品項的話，用表格列出每一項的商品、單價、數量、小計，最下面顯示總金額和「前往結帳」按鈕。數量的加減按鈕和移除按鈕，下一節再加上。
 -->
 
+---
+zoom: 0.95
 ---
 
 # 補充：導覽列的購物車數量（View Component）
@@ -524,6 +532,8 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
+zoom: 0.75
+---
 
 # 在 ASP.NET Core 中練習增減數量
 
@@ -569,6 +579,8 @@ Plus 要檢查庫存上限，Minus 則是數量剩 1 的時候再減，就直接
 查詢時用 tracked: true，修改 Count 之後直接 SaveAsync 就會更新。
 -->
 
+---
+zoom: 0.85
 ---
 
 # 移除品項與按鈕
@@ -701,6 +713,8 @@ flowchart LR
 -->
 
 ---
+zoom: 0.9
+---
 
 # 結算畫面 — GET Summary
 
@@ -737,6 +751,8 @@ GET 的 Summary 查出會員資料和購物車。
 收件資訊現在先用 ViewData 傳遞，大家可能會覺得這樣很不整齊，沒錯，這正是 10-7 要改善的地方：等訂單的 Model 建立好之後，收件資訊會放進 ViewModel 的 OrderHeader 裡。
 -->
 
+---
+zoom: 0.7
 ---
 
 # 結算畫面 — View 版面
@@ -869,6 +885,8 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
+zoom: 0.85
+---
 
 # OrderHeader：訂單主檔
 
@@ -909,6 +927,8 @@ OrderStatus 預設是 SD.StatusPending，待確認。最後的 OrderDetails 是�
 Models 專案要參考 Utility 專案，才能使用 SD。
 -->
 
+---
+zoom: 0.95
 ---
 
 # OrderDetail 與訂單狀態常數
@@ -1026,6 +1046,8 @@ class: flex flex-col justify-center items-center text-center
 第六個小節，我們來建立訂單的 Repository，除了基本的 Update，還要加上更新訂單狀態的方法。
 -->
 
+---
+zoom: 0.85
 ---
 
 # 在 ASP.NET Core 中練習訂單 Repository
@@ -1194,6 +1216,8 @@ vm.OrderHeader.StreetAddress = user?.StreetAddress ?? "";
 GET Summary 把會員資料填進 vm.OrderHeader，View 就能用 asp-for="OrderHeader.Name" 綁定，還能自動套用 OrderHeader 上的 Required 驗證。這就是 ViewModel 比 ViewData 好的地方。
 -->
 
+---
+zoom: 0.9
 ---
 
 # 從購物車建立訂單：用導覽屬性一次存檔
@@ -1383,6 +1407,8 @@ await transaction.CommitAsync();       // 全部成功才提交；沒 Commit 就
 -->
 
 ---
+zoom: 0.7
+---
 
 # 在 ASP.NET Core 中練習送出訂單
 
@@ -1528,6 +1554,8 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
+zoom: 0.65
+---
 
 # 什麼是訂單狀態流程？
 
@@ -1588,6 +1616,8 @@ public static string GetStatusBadge(string status) => status switch
 -->
 
 ---
+zoom: 0.85
+---
 
 # 後台訂單列表：依狀態篩選
 
@@ -1628,6 +1658,8 @@ GetAll API 可以傳入 status 參數篩選狀態，沒傳就顯示全部。依�
 -->
 
 ---
+zoom: 0.7
+---
 
 # 訂單列表 View：狀態頁籤 + DataTable
 
@@ -1667,6 +1699,8 @@ new DataTable('#tblOrder', {
 -->
 
 ---
+zoom: 0.75
+---
 
 # 訂單詳情與狀態更新
 
@@ -1705,6 +1739,8 @@ public async Task<IActionResult> StartProcessing(int id)
 StartProcessing 把訂單從待確認改成處理中。更新之前先檢查目前狀態是不是 Pending，不是的話就顯示錯誤，這就是剛剛說的「狀態不能亂跳」。檢查通過才呼叫 UpdateStatusAsync，再 SaveAsync 寫入。
 -->
 
+---
+zoom: 0.65
 ---
 
 # 出貨與取消訂單（還原庫存）
@@ -1786,6 +1822,7 @@ layout: default
 -->
 
 ---
+zoom: 0.75
 layout: default
 ---
 
@@ -1845,6 +1882,7 @@ Employee 的分店可以用 userManager.GetUserAsync(User) 取得 StoreId，再�
 -->
 
 ---
+zoom: 0.95
 layout: default
 ---
 

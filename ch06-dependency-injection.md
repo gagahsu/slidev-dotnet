@@ -405,6 +405,8 @@ IoC 和 DI 常常一起出現，它們的關係是：IoC 是概念，說的是�
 -->
 
 ---
+zoom: 0.95
+---
 
 # 在 ASP.NET Core 中練習 DI — Step 1：定義介面
 
@@ -555,6 +557,8 @@ public class CategoryController(ApplicationDbContext db) : Controller  // ② �
 整個過程我們完全不用自己 new，也不用自己關連線，這就是 IoC 和 DI 帶來的好處。
 -->
 
+---
+zoom: 0.95
 ---
 
 # 其他注入方式
