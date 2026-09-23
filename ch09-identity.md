@@ -192,8 +192,6 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 -->
 
 ---
-zoom: 0.95
----
 
 # Step 3：Program.cs 註冊 Identity
 
@@ -233,8 +231,6 @@ ConfigureApplicationCookie 設定登入頁、登出頁和權限不足頁的網�
 Pipeline 的部分，UseAuthentication 一定要在 UseAuthorization 之前。
 -->
 
----
-zoom: 0.95
 ---
 
 # Step 4：建立 Identity 資料表
@@ -352,7 +348,7 @@ Scaffold 是鷹架的意思，就是用工具自動產生程式碼。我們安�
 -->
 
 ---
-zoom: 0.8
+zoom: 0.9
 ---
 
 # 導覽列加入登入狀態：_LoginPartial
@@ -604,7 +600,7 @@ public static class SD
 -->
 
 ---
-zoom: 0.8
+zoom: 0.95
 ---
 
 # Step 2：啟動時建立角色與管理員帳號
@@ -668,7 +664,7 @@ using (var scope = app.Services.CreateScope())
 -->
 
 ---
-zoom: 0.85
+zoom: 0.9
 ---
 
 # Step 4：用角色限制存取
@@ -830,8 +826,6 @@ ApplicationUser 放在 Models 專案，因為 IdentityUser 屬於 Microsoft.Exte
 -->
 
 ---
-zoom: 0.9
----
 
 # 把 IdentityUser 全部換成 ApplicationUser
 
@@ -916,7 +910,7 @@ OnGetAsync 對應 GET 請求，就像 Controller 的 GET Action。我們在這�
 -->
 
 ---
-zoom: 0.75
+zoom: 0.9
 ---
 
 # 客製化 Register 頁面 — 建立使用者
@@ -1123,7 +1117,7 @@ public class StoreController(IUnitOfWork unitOfWork) : Controller
 -->
 
 ---
-zoom: 0.9
+zoom: 0.95
 ---
 
 # 註冊員工時選擇分店
@@ -1242,7 +1236,7 @@ layout: default
 -->
 
 ---
-zoom: 0.65
+zoom: 0.8
 layout: default
 ---
 

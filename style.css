@@ -55,3 +55,8 @@ code, pre, .shiki, .shiki * {
 }
 
 * { -webkit-user-select: text !important; user-select: text !important; }
+
+/* penguin theme caps code at 600px; C# lines are long, so use the full slide width */
+.slidev-layout .slidev-code-wrapper {
+  max-width: none !important;
+}

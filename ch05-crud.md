@@ -372,8 +372,6 @@ Required、MaxLength、Range 這些 Data Annotation 有兩個作用：一是資�
 -->
 
 ---
-zoom: 0.95
----
 
 # Step 5：建立 DbContext
 

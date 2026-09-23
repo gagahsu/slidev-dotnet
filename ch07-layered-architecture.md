@@ -103,8 +103,6 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
-zoom: 0.95
----
 
 # 目前的問題：Controller 什麼都做
 
@@ -554,8 +552,6 @@ Update 沒有放在泛型介面裡，因為每個實體更新的方式可能不�
 -->
 
 ---
-zoom: 0.85
----
 
 # Step 2：實作 Repository&lt;T&gt; — 查詢
 
@@ -823,8 +819,6 @@ UnitOfWork 在建構時，把同一個 DbContext 傳給每一個 Repository，�
 -->
 
 ---
-zoom: 0.95
----
 
 # 改寫 CategoryController
 
@@ -862,7 +856,7 @@ public class CategoryController(IUnitOfWork unitOfWork) : Controller
 -->
 
 ---
-zoom: 0.8
+zoom: 0.85
 ---
 
 # 改寫 CategoryController — Edit 與 Delete
