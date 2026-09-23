@@ -164,3 +164,27 @@ src: ./ch03-linq.md
 ---
 src: ./ch04-mvc-concepts.md
 ---
+
+---
+src: ./ch05-crud.md
+---
+
+---
+src: ./ch06-dependency-injection.md
+---
+
+---
+src: ./ch07-layered-architecture.md
+---
+
+---
+src: ./ch08-product.md
+---
+
+---
+src: ./ch09-identity.md
+---
+
+---
+src: ./ch10-cart-order.md
+---
