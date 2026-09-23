@@ -36,3 +36,4 @@ code/**/obj/
 
 # --- Claude Code local state ---
 .claude/
+*.tmp.mjs
