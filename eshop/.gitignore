@@ -1,0 +1,10 @@
+bin/
+obj/
+*.db
+*.db-shm
+*.db-wal
+TestResults/
+.vs/
+*.user
+# 執行時上傳的商品圖片
+**/wwwroot/images/product/

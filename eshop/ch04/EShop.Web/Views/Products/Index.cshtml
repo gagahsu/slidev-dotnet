@@ -1,0 +1,73 @@
+@model PagedResult<Product>
+@{
+    ViewData["Title"] = "商品列表";
+    var query = (ProductQuery)ViewData["Query"]!;
+    var categories = (List<Category>)ViewData["Categories"]!;
+}
+
+<h1>商品列表</h1>
+
+<form asp-action="Index" method="get" class="row g-2 mb-3">
+    <div class="col-md-4">
+        <input name="keyword" value="@query.Keyword" class="form-control"
+               placeholder="搜尋名稱或產地" />
+    </div>
+    <div class="col-md-3">
+        <select name="categoryId" class="form-select">
+            <option value="">全部分類</option>
+            @foreach (var c in categories)
+            {
+                <option value="@c.Id" selected="@(c.Id == query.CategoryId)">@c.Name</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <select name="sort" class="form-select"
+                asp-for="@query.Sort" asp-items="Html.GetEnumSelectList<ProductSort>()">
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">搜尋</button>
+    </div>
+</form>
+
+@if (Model.Items.Count == 0)
+{
+    <p class="text-muted">找不到符合條件的商品</p>
+}
+
+<div class="row">
+    @foreach (var p in Model.Items)
+    {
+        <div class="col-md-3 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">@p.Name</h5>
+                    <p class="card-text text-muted">@p.Origin</p>
+                    <p class="card-text">NT$ @p.Price.ToString("N0")</p>
+                    @if (!p.InStock)
+                    {
+                        <span class="badge bg-secondary">已售完</span>
+                    }
+                </div>
+                <div class="card-footer">
+                    <a asp-action="Details" asp-route-id="@p.Id">查看詳情</a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<nav>
+    <ul class="pagination">
+        @for (var i = 1; i <= Model.TotalPages; i++)
+        {
+            <li class="page-item @(i == Model.Page ? "active" : "")">
+                <a class="page-link" asp-action="Index" asp-route-page="@i"
+                   asp-route-keyword="@query.Keyword"
+                   asp-route-categoryId="@query.CategoryId"
+                   asp-route-sort="@query.Sort">@i</a>
+            </li>
+        }
+    </ul>
+</nav>
