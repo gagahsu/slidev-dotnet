@@ -604,6 +604,7 @@ public static class SD
 
 ---
 zoom: 0.95
+class: code-sm
 ---
 
 # Step 2：啟動時建立角色與管理員帳號
@@ -701,6 +702,8 @@ public class OrderController(...) : Controller { }                   // 第 10 �
 登入但角色不符的使用者，會被導向 AccessDenied 頁面，也就是 HTTP 403。
 -->
 
+---
+class: code-sm
 ---
 
 # Step 5：依角色顯示導覽列
@@ -1023,6 +1026,7 @@ layout: default
 
 ---
 layout: default
+class: code-sm
 ---
 
 # 練習 4：解題提示
@@ -1121,6 +1125,7 @@ public class StoreController(IUnitOfWork unitOfWork) : Controller
 
 ---
 zoom: 0.95
+class: code-sm
 ---
 
 # 註冊員工時選擇分店
@@ -1199,6 +1204,7 @@ DbInitializer 裡可以先檢查 db.Stores.AnyAsync()，沒有資料才新增。
 
 ---
 layout: default
+class: code-sm
 ---
 
 # 練習 5：解題提示

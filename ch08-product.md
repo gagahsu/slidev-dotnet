@@ -206,6 +206,7 @@ layout: default
 
 ---
 layout: default
+class: code-sm
 ---
 
 # 練習 1：解題提示
@@ -441,6 +442,8 @@ ImageUrl 存的是圖片的路徑，圖片檔案本身會存在 wwwroot 資料�
 注意 Category 和 ImageUrl 都宣告成可為 null。這很重要：開啟 Nullable 之後，MVC 會把不可為 null 的參考型別屬性當成必填，如果 Category 不是 nullable，表單送出時就會出現「Category 欄位是必填」的驗證錯誤，因為表單只會送出 CategoryId。
 -->
 
+---
+class: code-sm
 ---
 
 # 更新種子資料與 Migration
@@ -1293,6 +1296,8 @@ region 是用來摺疊程式碼的標記，方便把 API 集中在一起。
 -->
 
 ---
+class: code-sm
+---
 
 # Step 2：Index View 引入 DataTables
 
@@ -1480,6 +1485,8 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
+class: code-sm
+---
 
 # 前台首頁：商品卡片
 
@@ -1515,6 +1522,7 @@ Details 顯示單一商品的詳細資訊，找不到就回傳 404。
 
 ---
 zoom: 0.95
+class: code-sm
 ---
 
 # 首頁 View：Bootstrap Card
@@ -1552,6 +1560,8 @@ zoom: 0.95
 h-100 讓同一列的卡片高度一致，比較整齊。
 -->
 
+---
+class: code-sm
 ---
 
 # 商品詳細頁
@@ -1621,6 +1631,7 @@ Index 加上 int? categoryId 參數。filter 可以寫成 p => p.Stock > 0 && (c
 
 ---
 layout: default
+class: code-sm
 ---
 
 # 練習 8：解題提示

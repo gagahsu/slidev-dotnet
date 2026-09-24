@@ -307,6 +307,8 @@ docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=EShop@2026Pass" \
 -->
 
 ---
+class: code-sm
+---
 
 # Step 3：設定連線字串
 
@@ -1347,6 +1349,8 @@ return RedirectToAction(nameof(Index));
 注意我們用 Json.Serialize 把訊息轉成 JavaScript 字串，它會自動加上引號並處理跳脫字元，比直接把字串塞進單引號裡安全。
 -->
 
+---
+class: code-sm
 ---
 
 # Step 3：在 _Layout 引入 Toastr 並放入通知

@@ -631,6 +631,7 @@ primary constructor 可以有多個參數，用逗號隔開即可。運費要用
 
 ---
 layout: default
+class: code-sm
 ---
 
 # 練習 3：解題提示

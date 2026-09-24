@@ -766,6 +766,8 @@ C# 12 開始，建立集合可以直接用中括號，這叫 collection expressi
 -->
 
 ---
+zoom: 0.96
+---
 
 # 在 C# 中練習 for 與 foreach
 
@@ -1371,6 +1373,8 @@ InStock 是一個只有 get 的屬性，用箭頭寫法，庫存大於 0 就是�
 -->
 
 ---
+zoom: 0.96
+---
 
 # EShop 第 2 步：解題提示（續）
 ### enum 與 record
@@ -1408,6 +1412,8 @@ CartLine 和 PriceQuote 都用 positional record 的寫法，括號裡的參數�
 record 還有一個好處：兩個 PriceQuote 只要內容一樣，用 Equals 比較就會相等，等一下寫測試的時候很方便。
 -->
 
+---
+zoom: 0.9
 ---
 
 # EShop 第 2 步：解題提示（續 2）
@@ -1449,6 +1455,8 @@ GetDiscount 是這一步的重點。我們把會員等級和小計組成一個 t
 Quote 用 foreach 把每一行的小計加起來，再算出折扣，回傳一個 PriceQuote。
 -->
 
+---
+zoom: 0.9
 ---
 
 # EShop 第 2 步：解題提示（續 3）

@@ -1087,6 +1087,8 @@ app.MapControllerRoute(
 -->
 
 ---
+class: code-sm
+---
 
 # Step 3：連結加上 asp-area
 

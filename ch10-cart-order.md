@@ -204,6 +204,7 @@ dotnet ef database update --project EShop.DataAccess --startup-project EShop.Web
 
 ---
 zoom: 0.9
+class: code-sm
 ---
 
 # 商品詳細頁：加入購物車
@@ -384,6 +385,7 @@ Index 查出這位會員的所有購物車品項，includeProperties 載入商�
 
 ---
 zoom: 0.8
+class: code-sm
 ---
 
 # 購物車頁面 View
@@ -582,6 +584,7 @@ Plus 要檢查庫存上限，Minus 則是數量剩 1 的時候再減，就直接
 
 ---
 zoom: 0.85
+class: code-sm
 ---
 
 # 移除品項與按鈕
@@ -713,6 +716,8 @@ flowchart LR
 整個流程是：購物車、結算畫面、送出訂單、訂單完成頁。這一節先做結算畫面的顯示，送出的部分在 10-7 和 10-8。
 -->
 
+---
+class: code-sm
 ---
 
 # 結算畫面 — GET Summary
@@ -962,6 +967,8 @@ Price 就是 10-1 注意事項說的：價格在下單時寫入訂單明細，�
 -->
 
 ---
+class: code-sm
+---
 
 # 使用訂單資料表的注意事項
 
@@ -1082,6 +1089,8 @@ OrderHeaderRepository 除了 Update，多了一個 UpdateStatusAsync，專門更
 OrderDetailRepository 就是標準的寫法。
 -->
 
+---
+class: code-sm
 ---
 
 # 加入 UnitOfWork 與交易支援
@@ -1450,6 +1459,8 @@ public async Task<IActionResult> SummaryPost(ShoppingCartVM vm)
 -->
 
 ---
+class: code-sm
+---
 
 # 訂單完成頁
 
@@ -1693,6 +1704,7 @@ new DataTable('#tblOrder', {
 
 ---
 zoom: 0.8
+class: code-sm
 ---
 
 # 訂單詳情與狀態更新
@@ -1817,6 +1829,7 @@ layout: default
 ---
 zoom: 0.9
 layout: default
+class: code-sm
 ---
 
 # 練習 9：解題提示
@@ -1876,6 +1889,7 @@ Employee 的分店可以用 userManager.GetUserAsync(User) 取得 StoreId，再�
 
 ---
 layout: default
+class: code-sm
 ---
 
 # 綜合練習：解題提示
