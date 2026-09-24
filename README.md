@@ -13,6 +13,23 @@ pnpm build          # 輸出靜態網站到 dist/
 pnpm run export:all # 各章匯出 PDF 到 dist/
 ```
 
+## 檢查
+
+```bash
+pnpm check:project            # EShop：每一步 build（無警告）、test，並比對投影片上的程式碼摘錄
+pnpm check:width              # 列出可能太寬的程式碼行
+pnpm check:overflow 3030      # 先啟動 dev server：列出內容超出版面或程式碼換行的投影片
+```
+
+## 課程專案：EShop 線上咖啡豆商店
+
+每一章的最後都有一節「**EShop 專案實作**」，把這一章學到的東西用在同一個專案上：
+第 1 章建立方案與第一個 Middleware，第 2～4 章寫出商品模型、LINQ 查詢與前台商品頁，
+第 5 章接上 SQL Server，第 6～7 章改用 DI 與分層架構，第 8～10 章完成商品管理、會員權限、購物車與訂單。
+
+每一步的完整參考解答在 [`eshop/ch01`](eshop/) ～ [`eshop/ch10`](eshop/)，都可以獨立 `dotnet build`、`dotnet test`
+（測試用 SQLite，不需要 SQL Server）。路線表與執行方式見 [eshop/README.md](eshop/README.md)。
+
 ## 課綱
 
 | 章 | 主題 | 小節 |
@@ -33,6 +50,6 @@ pnpm run export:all # 各章匯出 PDF 到 dist/
 - 版面架構沿用 `slidev-java`（penguin 主題、目錄頁、`routeAlias` + `<Link>` 導覽、`_template/`）
 - 講稿（presenter notes）沿用 `slidev-springboot` 的古古人設：先情境再定義、生活類比、
   `回顧：` → `什麼是 XXX？` → `在 ASP.NET Core 中練習` → `注意事項` → `總結` 並預告下一章
-- 每個小節附練習（任務說明 + 解題提示），每章最後有綜合練習
+- 每個小節附練習（任務說明 + 解題提示），每章最後有綜合練習與「EShop 專案實作」
 
 詳細規範見 [`CLAUDE.md`](./CLAUDE.md)。

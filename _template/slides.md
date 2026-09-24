@@ -54,6 +54,7 @@ layout: default
 - **回顧：上一章主題**
 - **主題一**
 - **主題二**
+- **EShop 專案實作** — 第 N 步：一句話說明
 - **總結**
 
 ---
@@ -118,12 +119,61 @@ layout: default
 2. 步驟二
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# EShop 專案實作
+## 第 N 步：一句話說明
+
+<!--
+回到 EShop：先說目前的專案缺了什麼，再說這一章學的東西能怎麼補上。
+-->
+
+---
+
+# EShop 第 N 步：主題
+### 任務說明
+
+1. 完成本章講義的 EShop 部分
+2. 延伸任務（用本章觀念，不能和練習、綜合練習重複）
+
+| 情境 | 預期結果 |
+| --- | --- |
+| 情境一 | 結果 |
+
+<!--
+逐項說明任務與預期結果。
+-->
+
+---
+
+# EShop 第 N 步：解題提示
+### 小標題
+
+```csharp
+// eshop/EShop.Web/Program.cs
+// 摘錄必須和 eshop/chNN/EShop.Web/Program.cs 完全一致（pnpm check:project 會檢查）
+// ...
+```
+
+<!--
+先說這段程式在做什麼，再說執行後會看到什麼。
+-->
+
+---
+
+# EShop 第 N 步：解題提示（續）
+### 小標題
+
+---
 
 # 總結
 
 | 本章重點 | 一句話 |
 | --- | --- |
 | 重點一 | 說明 |
+| **EShop** 第 N 步 | 這一步完成了什麼 |
 
 下一章我們會介紹 ……
 
