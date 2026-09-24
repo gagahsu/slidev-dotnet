@@ -1,0 +1,25 @@
+@model List<Category>
+@{
+    ViewData["Title"] = "分類管理";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>商品分類</h2>
+    <a asp-action="Create" class="btn btn-primary">＋ 新增分類</a>
+</div>
+<table class="table table-bordered table-striped">
+    <thead><tr><th>分類名稱</th><th>顯示順序</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var c in Model)
+    {
+        <tr>
+            <td>@c.Name</td>
+            <td>@c.DisplayOrder</td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@c.Id" class="btn btn-sm btn-outline-primary">編輯</a>
+                <a asp-action="Delete" asp-route-id="@c.Id" class="btn btn-sm btn-outline-danger">刪除</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

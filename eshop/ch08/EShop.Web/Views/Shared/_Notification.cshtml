@@ -1,0 +1,8 @@
+@if (TempData["success"] is string success)
+{
+    <script>toastr.success(@Json.Serialize(success));</script>
+}
+@if (TempData["error"] is string error)
+{
+    <script>toastr.error(@Json.Serialize(error));</script>
+}

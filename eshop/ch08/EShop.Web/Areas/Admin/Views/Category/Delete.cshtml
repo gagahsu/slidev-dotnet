@@ -1,0 +1,17 @@
+@model Category
+@{
+    ViewData["Title"] = "刪除分類";
+}
+
+<h2 class="text-danger">確定要刪除這個分類嗎？</h2>
+<dl class="row">
+    <dt class="col-sm-2">@Html.DisplayNameFor(m => m.Name)</dt>
+    <dd class="col-sm-10">@Model.Name</dd>
+    <dt class="col-sm-2">@Html.DisplayNameFor(m => m.DisplayOrder)</dt>
+    <dd class="col-sm-10">@Model.DisplayOrder</dd>
+</dl>
+<form method="post">
+    <input asp-for="Id" type="hidden" />
+    <button type="submit" class="btn btn-danger">確認刪除</button>
+    <a asp-action="Index" class="btn btn-secondary">取消</a>
+</form>
