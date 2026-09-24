@@ -1287,6 +1287,8 @@ TotalPages 的算法是一個常見的小技巧：總筆數加上每頁筆數減
 -->
 
 ---
+zoom: 0.96
+---
 
 # EShop 第 3 步：解題提示（續）
 ### Search：條件一個一個串上去
@@ -1396,6 +1398,8 @@ GetCategorySummaries 用 GroupBy 依分類分組，每一組算出款數、平�
 Assert.Equal 的第一個參數可以直接寫 collection expression，第二個參數是 LINQ 的 Select 結果，xUnit 會一個一個元素比對。執行 dotnet test，這一步完成之後總共有 13 個測試。
 -->
 
+---
+zoom: 0.9
 ---
 
 # 總結

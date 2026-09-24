@@ -1016,6 +1016,8 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
+zoom: 0.8
+---
 
 # EShop 第 4 步：解題提示
 ### ProductsController
@@ -1062,6 +1064,7 @@ Index 的參數直接寫 ProductQuery。Model Binding 會自動把網址上的 k
 
 ---
 class: code-sm
+zoom: 0.9
 ---
 
 # EShop 第 4 步：解題提示（續）
@@ -1103,6 +1106,8 @@ View 的重點有三個。
 -->
 
 ---
+zoom: 0.9
+---
 
 # EShop 第 4 步：解題提示（續 2）
 ### 補充：整合測試
@@ -1143,6 +1148,8 @@ public class ProductsPageTests(WebApplicationFactory<Program> factory)
 小提醒：Razor 預設會把中文編碼成 &#x 開頭的字元，比對 HTML 內容之前，要先用 WebUtility.HtmlDecode 解碼。
 -->
 
+---
+zoom: 0.95
 ---
 
 # 總結

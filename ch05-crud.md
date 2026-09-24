@@ -307,7 +307,7 @@ docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=EShop@2026Pass" \
 -->
 
 ---
-class: code-sm
+class: code-xs
 ---
 
 # Step 3：設定連線字串
@@ -1611,6 +1611,8 @@ dotnet ef database update
 程式檢查負責給使用者友善的訊息，資料庫的索引負責守住最後一關，兩個一起用才完整。
 -->
 
+---
+zoom: 0.82
 ---
 
 # EShop 第 5 步：解題提示（續 2）

@@ -1026,7 +1026,7 @@ layout: default
 
 ---
 layout: default
-class: code-sm
+class: code-xs
 ---
 
 # 練習 4：解題提示
@@ -1504,6 +1504,8 @@ Controller 上的 Authorize 從 Roles 改成 Policy，寫的是 SD 裡的常數�
 另外還有測試驗證 DbInitializer 建好了角色和帳號，以及 claim 工廠真的會替信義店店員加上 StoreId。
 -->
 
+---
+zoom: 0.9
 ---
 
 # 總結

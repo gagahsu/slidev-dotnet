@@ -68,3 +68,9 @@ code, pre, .shiki, .shiki * {
 .slidev-layout.code-sm pre code .line {
   font-size: 12px !important;
 }
+
+/* 無法再縮短的單行（例如連線字串）：class: code-xs */
+.slidev-layout.code-xs pre code,
+.slidev-layout.code-xs pre code .line {
+  font-size: 10.5px !important;
+}

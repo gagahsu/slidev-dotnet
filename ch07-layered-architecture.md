@@ -1241,6 +1241,8 @@ class: flex flex-col justify-center items-center text-center
 -->
 
 ---
+zoom: 0.92
+---
 
 # EShop 第 7 步：自己的程式碼也搬進分層架構
 ### 任務說明
@@ -1270,6 +1272,8 @@ class: flex flex-col justify-center items-center text-center
 最後，分層之後資料存取層可以單獨測試，不用啟動整個網站。
 -->
 
+---
+zoom: 0.94
 ---
 
 # EShop 第 7 步：解題提示

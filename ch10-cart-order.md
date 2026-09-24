@@ -203,8 +203,8 @@ dotnet ef database update --project EShop.DataAccess --startup-project EShop.Web
 -->
 
 ---
-zoom: 0.9
 class: code-sm
+zoom: 0.86
 ---
 
 # 商品詳細頁：加入購物車
@@ -1459,7 +1459,7 @@ public async Task<IActionResult> SummaryPost(ShoppingCartVM vm)
 -->
 
 ---
-class: code-sm
+class: code-xs
 ---
 
 # 訂單完成頁
@@ -1704,7 +1704,7 @@ new DataTable('#tblOrder', {
 
 ---
 zoom: 0.8
-class: code-sm
+class: code-xs
 ---
 
 # 訂單詳情與狀態更新
@@ -2001,6 +2001,8 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 -->
 
 ---
+zoom: 0.9
+---
 
 # EShop 第 10 步：解題提示（續）
 ### OrderService：交易包住整個結帳流程
@@ -2169,6 +2171,8 @@ CartController 的 SummaryPost 變得很短：表單驗證失敗就回到畫面�
 EShop 的最後一步，我們把結帳流程抽成 OrderService，運費交給第六章的 IShippingService，再用整合測試證明：任何一項庫存不足，整筆訂單都會回滾；兩個顧客搶最後幾包豆子，也不會超賣。
 -->
 
+---
+zoom: 0.94
 ---
 
 # 課程回顧：我們一路走來
