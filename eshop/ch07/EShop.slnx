@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="EShop.DataAccess/EShop.DataAccess.csproj" />
+  <Project Path="EShop.Models/EShop.Models.csproj" />
+  <Project Path="EShop.Tests/EShop.Tests.csproj" />
+  <Project Path="EShop.Utility/EShop.Utility.csproj" />
+  <Project Path="EShop.Web/EShop.Web.csproj" />
+</Solution>

@@ -1,0 +1,25 @@
+@model Category
+@{
+    ViewData["Title"] = "新增分類";
+}
+
+<h2>新增分類</h2>
+<form method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="DisplayOrder" class="form-label"></label>
+        <input asp-for="DisplayOrder" class="form-control" />
+        <span asp-validation-for="DisplayOrder" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">建立</button>
+    <a asp-action="Index" class="btn btn-secondary">返回列表</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
