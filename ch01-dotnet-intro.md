@@ -59,6 +59,7 @@ layout: default
 - **1-2 .NET 10 簡介** — LTS 版本、C# 14 與這一版的新東西
 - **1-3 開發工具、環境架設** — .NET SDK + VS Code + C# Dev Kit
 - **1-4 ASP.NET Core 網站生命週期** — 從 `Program.cs` 到 Middleware Pipeline
+- **EShop 專案實作** — 第 1 步：建立 EShop 方案與第一個 Middleware
 - **總結**
 
 <!--
@@ -67,6 +68,8 @@ layout: default
 前兩節是觀念：什麼是 ASP.NET Core、什麼是 .NET 10。第三節是動手做：安裝 SDK、VS Code，建立並執行第一個 MVC 專案。第四節我們會打開 Program.cs，一行一行看網站是怎麼啟動、請求是怎麼被處理的。
 
 每個小節結束都有一個小練習，章節最後還有一題綜合練習。
+
+最後是 EShop 專案實作：我們會建立整門課的專案 EShop，寫出第一個自己的 Middleware。
 -->
 
 ---
@@ -1041,6 +1044,170 @@ app.Use(async (context, next) =>
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# EShop 專案實作
+## 第 1 步：建立 EShop 方案與第一個 Middleware
+
+<!--
+學完一整章的觀念，我們要開始動手蓋一個真正的網站了。
+
+從這一章開始，每一章的最後都會有一段「EShop 專案實作」，把這一章學到的東西，用在同一個專案上。就像蓋房子一樣，今天先打地基，之後每一章往上加一層樓，到第十章，就是一間可以真的買咖啡豆的網路商店。
+-->
+
+---
+
+# 課程專案介紹：EShop 咖啡豆商店
+
+**EShop** 是一間線上咖啡豆商店，整門課我們會一步一步把它做出來：
+
+| 角色 | 可以做的事 |
+| --- | --- |
+| 顧客 | 瀏覽與搜尋商品、註冊登入、加入購物車、結帳下單 |
+| 員工 | 管理商品與圖片、查看與處理訂單（出貨、取消） |
+| 管理員 | 以上全部，再加上管理分類、分店與員工帳號 |
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 每一章的完整參考解答都放在 <code>eshop/ch01</code> ～ <code>eshop/ch10</code>，可以獨立 <code>dotnet build</code>、<code>dotnet test</code>。做不出來的時候，打開對應的資料夾比對就好。
+</div>
+
+<!--
+先來認識一下我們要做的網站。
+
+EShop 是一間賣咖啡豆的網路商店。想像一下我們平常逛的購物網站：顧客可以看商品、搜尋、加入購物車、結帳；店裡的員工要上架商品、處理訂單；老闆，也就是管理員，還要管分類、分店和員工帳號。這三種角色，就是我們最後要完成的樣子。
+
+每一章做完的完整程式碼，都放在 eshop 資料夾底下，ch01 到 ch10 各一份。大家寫的時候卡住了，可以打開對應章節的資料夾比對，每一份都可以直接 build、直接跑測試。
+-->
+
+---
+zoom: 0.9
+---
+
+# EShop 成長路線表
+
+| 步 | 新增的功能 | 用到的觀念 |
+| --- | --- | --- |
+| 1 | 建立方案、版本標頭與請求計時 Middleware | 專案結構、Middleware Pipeline |
+| 2 | `Product`、`Category`、會員折扣、第一個單元測試 | 類別、record、switch expression |
+| 3 | 記憶體商品目錄：搜尋、排序、分頁、分類統計 | LINQ、延遲執行 |
+| 4 | 前台商品列表與詳情頁 | Controller、Razor、Tag Helper、路由 |
+| 5 | 分類 CRUD 存進資料庫、分類名稱不可重複 | EF Core、Migration、驗證 |
+| 6 | 商品目錄與運費服務改用 DI | 介面、注入、生命週期 |
+| 7 | 拆成四個專案、前後台 Area、營運總覽 | 分層、Repository、UnitOfWork |
+| 8 | 商品管理、圖片上傳，搜尋與分頁改在資料庫執行 | ViewModel、IQueryable |
+| 9 | 會員、角色與授權 Policy | Identity、Claim、Policy |
+| 10 | 購物車、結帳服務、交易與訂單管理 | 交易、整合測試 |
+
+<!--
+這張表是 EShop 的成長路線。
+
+前三章還沒有畫面，我們先把專案建起來，再用 C# 和 LINQ 把商品資料和查詢寫好。第四章開始有網頁，第五章接上資料庫，第六、七章把程式架構整理乾淨，最後三章完成商品管理、會員權限，還有購物車和訂單。
+
+大家會發現，每一步用到的觀念，剛好就是那一章教的內容。所以每一章的專案實作，也是檢查自己有沒有真的學會的好機會。
+-->
+
+---
+
+# EShop 第 1 步：建立方案與 Middleware
+### 任務說明
+
+1. 建立 `EShop` 方案與 `EShop.Web` MVC 專案，並把專案加入方案
+2. 導覽列的品牌改成「EShop 咖啡豆商店」，首頁顯示歡迎文字
+3. 在 `Program.cs` 用 `app.Use` 加入一個 Middleware：
+   - 每個回應都加上標頭 `X-EShop-Version: 1.0`
+   - 在 console 印出請求的方法、路徑、狀態碼與處理時間
+
+**預期結果**：瀏覽首頁與一個不存在的網址，console 會印出：
+
+```text
+[EShop] GET / → 200（121 ms）
+[EShop] GET /nope → 404（2 ms）
+```
+
+<!--
+第一步的任務有三件事。
+
+第一，建立方案和 MVC 專案，這個我們在 1-3 已經做過一次了，這次名稱改成 EShop。
+
+第二，把範本預設的網站名稱，改成我們自己的店名。
+
+第三，是這一章的重點：自己寫一個 Middleware。它要做兩件事：幫每個回應加上一個版本標頭，並且記錄每個請求花了多少時間。
+
+完成之後，打開首頁，console 會印出一行 GET 斜線、200；故意打一個不存在的網址，會印出 404。大家可以注意一下，404 的請求也被記錄到了，因為 Middleware 對所有請求都有效。
+-->
+
+---
+
+# EShop 第 1 步：解題提示
+### 建立方案與專案
+
+```bash
+mkdir EShop && cd EShop
+dotnet new sln -n EShop          # .NET 10 產生 EShop.slnx
+dotnet new mvc -n EShop.Web
+dotnet sln add EShop.Web/EShop.Web.csproj
+cd EShop.Web && dotnet watch
+```
+
+```razor
+@* eshop/EShop.Web/Views/Home/Index.cshtml *@
+@{
+    ViewData["Title"] = "首頁";
+}
+
+<div class="text-center">
+    <h1 class="display-4">歡迎光臨 EShop</h1>
+    <p>線上咖啡豆商店，每一包豆子都是新鮮烘焙。</p>
+</div>
+```
+
+<!--
+先用四個指令建立方案和專案。.NET 10 的 dotnet new sln 預設會產生新格式的 slnx 檔，它是 XML 格式，比舊的 sln 好讀很多。
+
+接著打開 Views/Home/Index.cshtml，把範本的 Welcome 換成我們的歡迎文字。導覽列的品牌名稱在 Views/Shared/_Layout.cshtml 的 navbar-brand 那一行，改成 EShop 咖啡豆商店。
+
+改完存檔，dotnet watch 會自動重新整理瀏覽器，馬上就能看到結果。
+-->
+
+---
+
+# EShop 第 1 步：解題提示（續）
+### 版本標頭與計時 Middleware
+
+```csharp
+// eshop/EShop.Web/Program.cs
+// EShop 的第一個 Middleware：加上版本標頭、記錄處理時間
+app.Use(async (context, next) =>
+{
+    var start = DateTime.Now;
+    // 標頭要在 next() 之前設定：回應開始送出後就不能再改
+    context.Response.Headers["X-EShop-Version"] = "1.0";
+
+    await next(context);
+
+    var ms = (DateTime.Now - start).TotalMilliseconds;
+    Console.WriteLine(
+        $"[EShop] {context.Request.Method} {context.Request.Path}" +
+        $" → {context.Response.StatusCode}（{ms:F0} ms）");
+});
+```
+
+- 放在 `UseRouting()` **之前**，才記錄得到所有請求（包含 404）
+- 用 `curl -I http://localhost:5280` 可以看到 `X-EShop-Version: 1.0`
+
+<!--
+這是 Middleware 的寫法，跟 1-4 的範例很像，只多了一行設定標頭。
+
+大家注意標頭是寫在 await next 之前。為什麼？因為 next 執行完，Controller 已經把畫面寫進回應了，回應一旦開始送出，標頭就不能再改，這時候再設定會丟出例外。就像寄包裹，封箱之後就不能再往外箱貼標籤了。
+
+另外這個 Middleware 要放在 UseRouting 之前，越前面越好，這樣每一個請求都會經過它，就算是找不到頁面的 404，也會被記錄下來。
+
+最後用 curl 加上 -I 參數，只看回應的標頭，就能確認 X-EShop-Version 有沒有加上去。
+-->
+
+---
 
 # 總結
 
@@ -1050,6 +1217,7 @@ app.Use(async (context, next) =>
 | 1-2 .NET 10 | 2025/11 發布的 LTS 版本，支援到 2028/11；搭配 C# 14 |
 | 1-3 開發環境 | .NET 10 SDK + VS Code + C# Dev Kit；`dotnet new mvc`、`dotnet watch` |
 | 1-4 生命週期 | `Program.cs` 先註冊服務、再設定 Pipeline；請求依序經過 Middleware 到 Controller |
+| **EShop** 第 1 步 | 建立 `EShop` 方案與 `EShop.Web`，用 `app.Use` 加上版本標頭與請求計時 |
 
 下一章我們會介紹 **C# 基礎語法**，把寫 ASP.NET Core 需要的語言基本功打好。
 
@@ -1059,6 +1227,8 @@ app.Use(async (context, next) =>
 ASP.NET Core 是跨平台的 Web 框架；.NET 10 是目前最新的 LTS 版本；我們用 dotnet new mvc 建立了第一個專案，也用 dotnet watch 把它跑起來；最後我們知道 Program.cs 分成「註冊服務」和「設定 Pipeline」兩個階段，每個請求都會像剝洋蔥一樣經過 Middleware，最後抵達 Controller。
 
 掌握了這張地圖，後面學到的每個功能，大家都能知道它是放在哪個位置。
+
+EShop 專案在這一章正式開工：我們建立了 EShop 方案，還寫了第一個自己的 Middleware，幫每個回應加上版本標頭、記錄每個請求花了多少時間。之後每一章，都會在這個專案上加一層樓。
 
 下一章我們會介紹 C# 的基礎語法，包括程式架構、變數、條件判斷、迴圈，以及類別與物件，把寫 ASP.NET Core 需要的語言基本功打好。
 -->

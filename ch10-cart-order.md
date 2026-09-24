@@ -67,12 +67,15 @@ layout: default
 - **10-7 將購物車金額與訂單合併**
 - **10-8 送出訂單與庫存處理**
 - **10-9 訂單狀態管理與後台查詢**
+- **EShop 專案實作** — 第 10 步：結帳服務化與交易測試
 - **總結 & 課程回顧**
 
 <!--
 這一章有九個小節，可以分成三段：10-1 到 10-3 是購物車，10-4 到 10-8 是結帳下單，10-9 是後台的訂單管理。
 
 每一節都會接續上一節的程式碼，最後完成一個完整的購物流程。
+
+章節最後的 EShop 專案實作，我們會把結帳流程抽成服務，用整合測試證明交易真的會回滾，並回顧完成的 EShop。
 -->
 
 ---
@@ -1910,6 +1913,227 @@ Employee 的篩選條件是：宅配訂單（StoreId 是 null）全部看得到�
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# EShop 專案實作
+## 第 10 步：結帳服務化與交易測試
+
+<!--
+最後一次回到 EShop。講義這一章完成了購物車、結帳、訂單和庫存，EShop 已經是一間可以真的下單的商店了。
+
+但是結帳是整個網站最重要、也最容易出錯的地方：扣庫存、建立訂單、清空購物車，三件事要嘛全部成功、要嘛全部不算。講義用交易處理了這件事，可是我們怎麼證明它真的有效？總不能每次改程式，都手動去買一次看看。這一步我們把結帳流程抽成一個服務，再用測試證明交易真的會回滾。
+-->
+
+---
+
+# EShop 第 10 步：結帳服務化與交易測試
+### 任務說明
+
+1. 完成本章的購物車、結算畫面、訂單、條件式扣庫存與後台訂單管理（`OrderController` 套用第 9 步的 `Staff` Policy）
+2. 把 `SummaryPost` 的結帳流程搬進 `IOrderService.PlaceOrderAsync(userId, 收件資訊)`，回傳 `PlaceOrderResult`（成功時有訂單編號，失敗時有原因）
+3. 運費不再寫死 1500 / 150，改用第 6 章的 `IShippingService` 計算
+4. 用 SQLite 寫整合測試，證明以下情境：
+
+| 情境 | 預期結果 |
+| --- | --- |
+| 正常下單（1,280 元） | 扣庫存、建立訂單與明細、清空購物車、運費 150 |
+| 第二項庫存不足 | 失敗並指出商品名稱；**第一項的庫存也還原**、沒有訂單、購物車保留 |
+| 兩位顧客搶最後 5 包，各買 3 包 | 只有先下單的成功，庫存剩 2，**不會變成負數** |
+
+<!--
+第十步的延伸任務有三項。
+
+第一，把結帳流程從 Controller 搬到 OrderService。Controller 負責處理 HTTP，像表單驗證、轉址、TempData；真正的商業邏輯放在服務裡，這樣不用發出 HTTP 請求也能測試。
+
+第二，運費改用第六章的 IShippingService。講義在 BuildOrder 裡寫死了 1500 和 150，如果老闆換了物流商，就會漏改。
+
+第三是這一步的重點：用測試證明交易有效。表格的第二種情境最關鍵：第一項商品的庫存已經扣掉了，才發現第二項不夠，這時候第一項的庫存一定要還原。第三種情境模擬兩個顧客搶最後幾包豆子，驗證條件式扣庫存真的不會超賣。
+-->
+
+---
+
+# EShop 第 10 步：解題提示
+### 定義服務的介面與結果
+
+```csharp
+// eshop/EShop.Web/Services/IOrderService.cs
+// 下單結果：成功時有訂單編號，失敗時有原因
+public record PlaceOrderResult(int? OrderId, string? Error)
+{
+    public bool Succeeded => OrderId is not null;
+}
+
+public interface IOrderService
+{
+    Task<PlaceOrderResult> PlaceOrderAsync(
+        string userId, OrderHeader shippingInfo);
+}
+```
+
+```csharp
+// eshop/EShop.Web/Program.cs
+builder.Services.AddScoped<IShippingService, BlackCatShipping>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+```
+
+<!--
+先定義結果的型別。結帳可能成功也可能失敗，成功要知道訂單編號，失敗要知道原因，我們用一個 record 把兩種情況裝在一起，Succeeded 看訂單編號有沒有值就知道了。
+
+介面只有一個方法：傳入會員編號和收件資訊，回傳結果。
+
+註冊的時候用 Scoped，因為 OrderService 會用到 UnitOfWork，而 UnitOfWork 裡面的 DbContext 是 Scoped。第六章說過，生命週期長的服務不能依賴生命週期短的服務，所以這裡不能用 Singleton。
+-->
+
+---
+
+# EShop 第 10 步：解題提示（續）
+### OrderService：交易包住整個結帳流程
+
+```csharp
+// eshop/EShop.Web/Services/OrderService.cs
+        var carts = await unitOfWork.ShoppingCart.GetAllAsync(
+            filter: c => c.ApplicationUserId == userId,
+            includeProperties: "Product");
+        if (carts.Count == 0) return new(null, "購物車是空的");
+
+        await using var transaction = await unitOfWork.BeginTransactionAsync();
+
+        foreach (var c in carts)
+        {
+            var ok = await unitOfWork.Product
+                .DecreaseStockAsync(c.ProductId, c.Count);
+            if (!ok)   // 直接 return：沒有 Commit，交易自動 Rollback
+                return new(null, $"「{c.Product!.Name}」庫存不足，請調整數量");
+        }
+
+        var order = BuildOrder(shippingInfo, userId, carts);
+        unitOfWork.OrderHeader.Add(order);                // 主檔 + 明細
+        unitOfWork.ShoppingCart.RemoveRange(carts);       // 清空購物車
+        await unitOfWork.SaveAsync();
+        await transaction.CommitAsync();                  // 全部成功才提交
+
+        return new(order.Id, null);
+```
+
+<!--
+PlaceOrderAsync 的內容，就是講義 SummaryPost 的流程，只是從 Controller 搬了過來。
+
+先查出購物車，空的就直接回傳失敗。接著開始交易，逐一扣庫存。DecreaseStockAsync 是講義的條件式 UPDATE，庫存不夠會回傳 false，這時候我們直接 return 失敗結果。
+
+大家注意，這裡沒有寫任何 Rollback。transaction 是用 await using 宣告的，離開方法的時候會自動 Dispose，而一個沒有 Commit 的交易被 Dispose，就會自動 Rollback。只有全部成功、走到最後一行 CommitAsync，所有變更才會真的寫進資料庫。
+-->
+
+---
+
+# EShop 第 10 步：解題提示（續 2）
+### 運費交給 IShippingService、Controller 變簡單了
+
+```csharp
+// eshop/EShop.Web/Services/OrderService.cs
+        // 金額一律由伺服器重新計算，不相信表單送來的值
+        order.OrderTotal = carts.Sum(c => c.Product!.Price * c.Count);
+        order.ShippingFee = shipping.Calculate(order.OrderTotal);   // 第 6 章的運費服務
+```
+
+```csharp
+// eshop/EShop.Web/Areas/Customer/Controllers/CartController.cs
+        // 扣庫存、建立訂單、清空購物車：交給 OrderService 在同一個交易完成
+        var result = await orderService.PlaceOrderAsync(UserId, vm.OrderHeader);
+        if (!result.Succeeded)
+        {
+            TempData[SD.Error] = result.Error;
+            return RedirectToAction(nameof(Index));
+        }
+        return RedirectToAction(
+            nameof(OrderConfirmation), new { id = result.OrderId });
+```
+
+<!--
+BuildOrder 和講義幾乎一樣，只改了運費這一行：不再寫死 1500 和 150，而是交給注入進來的 IShippingService。第六章我們說過，換物流商只要改 Program.cs 一行，現在訂單的運費也會跟著一起換。
+
+CartController 的 SummaryPost 變得很短：表單驗證失敗就回到畫面；驗證通過就呼叫 OrderService，失敗就用 TempData 顯示原因、回到購物車，成功就轉到訂單完成頁。Controller 只剩下和 HTTP 有關的工作。
+-->
+
+---
+
+# EShop 第 10 步：解題提示（續 3）
+### 用測試證明交易會回滾
+
+```csharp
+// eshop/EShop.Tests/OrderServiceTests.cs
+    public async Task 第二項庫存不足_整筆訂單回滾()
+    {
+        // 耶加雪菲（庫存 20）買 2 包沒問題；藝伎只剩 5 包卻要買 6 包
+        AddToCart("amy", (productId: 1, count: 2), (productId: 3, count: 6));
+
+        var result = await PlaceOrderAsync("amy");
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("翡翠莊園藝伎", result.Error);
+        using var db = _testDb.CreateContext();
+        // 第一項已經扣掉的庫存，也跟著交易一起還原
+        Assert.Equal(20, (await db.Products.FindAsync(1))!.Stock);
+        Assert.Empty(db.OrderHeaders);
+        // 購物車保留，讓顧客調整數量
+        Assert.Equal(2, await db.ShoppingCarts.CountAsync());
+    }
+```
+
+<div class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-gray-700 text-sm text-left">
+💡 試試看：把 <code>BeginTransactionAsync</code> 和 <code>CommitAsync</code> 兩行註解掉，這個測試就會失敗，耶加雪菲的庫存變成 18。
+</div>
+
+<!--
+這是最重要的一個測試。購物車裡有兩項：耶加雪菲買兩包，庫存夠；藝伎要六包，但只剩五包。
+
+結帳的時候，耶加雪菲會先被扣掉兩包，接著藝伎扣庫存失敗。我們檢查三件事：耶加雪菲的庫存還是 20，代表剛剛扣掉的兩包被還原了；沒有產生任何訂單；購物車也還在。
+
+怎麼知道這個測試真的有用？大家可以做一個實驗：把開始交易和 Commit 那兩行註解掉，再跑一次測試，就會看到它失敗，耶加雪菲的庫存變成 18。一個好的測試，要能在程式出錯的時候抓到它。
+-->
+
+---
+
+# EShop 完成了！
+
+<div class="grid grid-cols-2 gap-6">
+<div>
+
+| 專案 | 負責的事 |
+| --- | --- |
+| `EShop.Models` | Entity、ViewModel、查詢條件 |
+| `EShop.DataAccess` | DbContext、Migration、Repository、UnitOfWork |
+| `EShop.Utility` | `SD` 常數、訂單狀態文字 |
+| `EShop.Web` | Admin / Customer / Identity 三個 Area、服務、Middleware |
+| `EShop.Tests` | 66 個單元與整合測試（SQLite） |
+
+</div>
+<div>
+
+| 功能 | 用到的章節 |
+| --- | --- |
+| 請求計時、會員折扣 | Ch01、Ch02 |
+| 搜尋、分類、排序、分頁 | Ch03、Ch04、Ch08 |
+| 分類、商品、分店管理 | Ch05、Ch07、Ch08、Ch09 |
+| 運費、目錄、結帳服務 | Ch06、Ch10 |
+| 會員、角色、授權 Policy | Ch09 |
+| 購物車、訂單、交易、庫存 | Ch10 |
+
+</div>
+</div>
+
+<!--
+恭喜大家，EShop 完成了！
+
+左邊是整個方案的五個專案：Models 放資料的形狀，DataAccess 負責和資料庫溝通，Utility 放共用的常數，Web 是前台、後台和會員三個區域，最後的 Tests 有 66 個測試，每一章加上去的功能都有測試保護。
+
+右邊是每個功能用到了哪幾章。大家會發現，幾乎每個功能都橫跨好幾章：第三章寫的查詢，第四章做成網頁，第八章搬進資料庫；第六章的運費服務，到第十章結帳還在用。這就是我們一直強調的，每一章都建立在前一章的基礎上。
+
+這十個版本的完整程式碼都在 eshop 資料夾，大家可以從 ch01 一路比對到 ch10，看看一個網站是怎麼一步一步長出來的。
+-->
+
+---
 
 # 總結
 
@@ -1921,11 +2145,14 @@ Employee 的篩選條件是：宅配訂單（StoreId 是 null）全部看得到�
 | 10-7 合併 | 導覽屬性 `OrderDetails` 讓主檔與明細一次 `SaveAsync` |
 | 10-8 庫存 | 條件式 `ExecuteUpdateAsync` 防超賣 + 交易確保全有全無 |
 | 10-9 訂單管理 | 狀態流程與轉換檢查、switch expression 顯示、取消還原庫存 |
+| **EShop** 第 10 步 | 結帳流程抽成 `IOrderService`、運費交給 `IShippingService`；整合測試證明庫存不足時整筆回滾、不會超賣 |
 
 <!--
 我們來總結這一章。
 
 購物車記錄會員、商品和數量，查詢一定要加上會員條件。結帳時金額永遠在伺服器計算。訂單分成主檔和明細，明細保存下單時的價格，用導覽屬性一次存檔。扣庫存用條件式 UPDATE 避免超賣，並用交易確保全部成功或全部失敗。最後，訂單有狀態流程，更新前要檢查目前狀態，取消時要還原庫存。
+
+EShop 的最後一步，我們把結帳流程抽成 OrderService，運費交給第六章的 IShippingService，再用整合測試證明：任何一項庫存不足，整筆訂單都會回滾；兩個顧客搶最後幾包豆子，也不會超賣。
 -->
 
 ---
@@ -1942,16 +2169,16 @@ Employee 的篩選條件是：宅配訂單（StoreId 是 null）全部看得到�
 | Ch09 | Identity、角色授權、ApplicationUser | 會員與分店 |
 | Ch10 | 購物車、訂單、交易、庫存 | 完整購物流程 |
 
-下一步可以學習：**Web API 與 JWT**、**單元測試（xUnit）**、**金流串接（綠界 / Stripe）**、**Docker 部署與 Azure**。
+下一步可以學習：**Web API 與 JWT**、**持續整合（CI 自動跑測試）**、**金流串接（綠界 / Stripe）**、**Docker 部署與 Azure**。
 
 <!--
 最後，我們一起回顧整門課。
 
-第一、二章打好了 .NET 10 和 C# 的地基；第三章的 LINQ 貫穿了所有查詢；第四、五章用 MVC 和 EF Core 完成了第一個 CRUD；第六、七章用 DI 和分層架構把專案骨架整理好；第八章完成商品管理和首頁；第九章加上會員和權限；第十章完成購物車和訂單。
+第一、二章打好了 .NET 10 和 C# 的地基；第三章的 LINQ 貫穿了所有查詢；第四、五章用 MVC 和 EF Core 完成了第一個 CRUD；第六、七章用 DI 和分層架構把專案骨架整理好；第八章完成商品管理和首頁；第九章加上會員和權限；第十章完成購物車和訂單。每一章的最後，我們也都把學到的東西用在 EShop 上，並且用測試保護它。
 
 從一行 Hello World，到一個有前後台、會員權限、購物車、訂單和庫存管理的完整購物網站，恭喜大家完成了這門課！
 
-如果想繼續往下學，推薦幾個方向：用 Web API 和 JWT 做前後端分離、用 xUnit 寫單元測試、串接綠界或 Stripe 金流，以及用 Docker 部署到 Azure。大家已經掌握了 ASP.NET Core 最核心的觀念，接下來學什麼都會很快。
+如果想繼續往下學，推薦幾個方向：用 Web API 和 JWT 做前後端分離、用 GitHub Actions 在每次 push 時自動跑 EShop 的測試、串接綠界或 Stripe 金流，以及用 Docker 部署到 Azure。大家已經掌握了 ASP.NET Core 最核心的觀念，接下來學什麼都會很快。
 
 謝謝大家！
 -->

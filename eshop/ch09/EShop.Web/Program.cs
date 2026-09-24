@@ -36,8 +36,8 @@ builder.Services.AddRazorPages();                 // Identity UI 是 Razor Pages
 
 // 授權規則集中在這裡：Controller 只寫 policy 名稱
 builder.Services.AddAuthorizationBuilder()
-    .AddPolicy(SD.Policy_Admin, policy => policy.RequireRole(SD.Role_Admin))
-    .AddPolicy(SD.Policy_Staff, policy => policy.RequireAssertion(context =>
+    .AddPolicy(SD.Policy_Admin, p => p.RequireRole(SD.Role_Admin))
+    .AddPolicy(SD.Policy_Staff, p => p.RequireAssertion(context =>
         context.User.IsInRole(SD.Role_Admin) ||
         (context.User.IsInRole(SD.Role_Employee) &&
          context.User.HasClaim(c => c.Type == SD.Claim_StoreId))));

@@ -101,7 +101,8 @@ public class CartController(IUnitOfWork unitOfWork, IOrderService orderService) 
             TempData[SD.Error] = result.Error;
             return RedirectToAction(nameof(Index));
         }
-        return RedirectToAction(nameof(OrderConfirmation), new { id = result.OrderId });
+        return RedirectToAction(
+            nameof(OrderConfirmation), new { id = result.OrderId });
     }
 
     public async Task<IActionResult> OrderConfirmation(int id)

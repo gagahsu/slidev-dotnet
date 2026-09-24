@@ -2,8 +2,8 @@ using EShop.Web.Models;
 
 namespace EShop.Web.Services;
 
-public class InMemoryProductCatalog(List<Product> products, List<Category> categories)
-    : IProductCatalog
+public class InMemoryProductCatalog(
+    List<Product> products, List<Category> categories) : IProductCatalog
 {
     public List<Category> GetCategories() =>
         categories.OrderBy(c => c.DisplayOrder).ToList();
@@ -36,7 +36,8 @@ public class InMemoryProductCatalog(List<Product> products, List<Category> categ
         var items = matched.Skip((page - 1) * query.PageSize)
                            .Take(query.PageSize)
                            .ToList();
-        return new PagedResult<Product>(items, page, query.PageSize, matched.Count);
+        return new PagedResult<Product>(
+            items, page, query.PageSize, matched.Count);
     }
 
     public List<CategorySummary> GetCategorySummaries() =>

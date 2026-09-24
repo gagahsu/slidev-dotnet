@@ -24,7 +24,8 @@ public class OrderServiceTests : IDisposable
     [Fact]
     public async Task 下單成功_扣庫存_建立訂單_清空購物車()
     {
-        AddToCart("amy", (productId: 1, count: 2), (productId: 2, count: 1));   // 450×2 + 380
+        // 450×2 + 380 = 1280
+        AddToCart("amy", (productId: 1, count: 2), (productId: 2, count: 1));
 
         var result = await PlaceOrderAsync("amy");
 
@@ -43,16 +44,19 @@ public class OrderServiceTests : IDisposable
     [Fact]
     public async Task 第二項庫存不足_整筆訂單回滾()
     {
-        AddToCart("amy", (productId: 1, count: 2), (productId: 3, count: 6));   // 藝伎只剩 5 包
+        // 耶加雪菲（庫存 20）買 2 包沒問題；藝伎只剩 5 包卻要買 6 包
+        AddToCart("amy", (productId: 1, count: 2), (productId: 3, count: 6));
 
         var result = await PlaceOrderAsync("amy");
 
         Assert.False(result.Succeeded);
         Assert.Contains("翡翠莊園藝伎", result.Error);
         using var db = _testDb.CreateContext();
-        Assert.Equal(20, (await db.Products.FindAsync(1))!.Stock);   // 第一項已扣的庫存也還原了
+        // 第一項已經扣掉的庫存，也跟著交易一起還原
+        Assert.Equal(20, (await db.Products.FindAsync(1))!.Stock);
         Assert.Empty(db.OrderHeaders);
-        Assert.Equal(2, await db.ShoppingCarts.CountAsync());       // 購物車保留，讓顧客調整
+        // 購物車保留，讓顧客調整數量
+        Assert.Equal(2, await db.ShoppingCarts.CountAsync());
     }
 
     [Fact]

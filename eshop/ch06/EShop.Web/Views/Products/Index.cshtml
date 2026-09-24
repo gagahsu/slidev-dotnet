@@ -17,13 +17,15 @@
             <option value="">全部分類</option>
             @foreach (var c in categories)
             {
-                <option value="@c.Id" selected="@(c.Id == query.CategoryId)">@c.Name</option>
+                <option value="@c.Id" selected="@(c.Id == query.CategoryId)">
+                    @c.Name
+                </option>
             }
         </select>
     </div>
     <div class="col-md-3">
-        <select name="sort" class="form-select"
-                asp-for="@query.Sort" asp-items="Html.GetEnumSelectList<ProductSort>()">
+        <select name="sort" class="form-select" asp-for="@query.Sort"
+                asp-items="Html.GetEnumSelectList<ProductSort>()">
         </select>
     </div>
     <div class="col-md-2">

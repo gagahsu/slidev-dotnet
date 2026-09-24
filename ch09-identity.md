@@ -61,10 +61,13 @@ layout: default
 - **9-3 角色（Role）與權限控管（Authorization）**
 - **9-4 調整註冊頁面與客製化欄位**
 - **9-5 建立分店資訊**
+- **EShop 專案實作** — 第 9 步：用授權 Policy 管理後台權限
 - **總結**
 
 <!--
 這一章有五個小節。前兩節建立會員系統的基礎：註冊和登入。第三節是權限控管的核心：角色與授權。第四節客製化會員資料。第五節建立分店，並讓員工隸屬於分店。
+
+最後的 EShop 專案實作，我們會把分店寫進登入的 claim，改用授權 Policy 管理後台權限，並用測試驗證整張權限表。
 -->
 
 ---
@@ -1311,6 +1314,191 @@ Passkey 讓使用者用手機或電腦的指紋、臉部辨識登入，不需要
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# EShop 專案實作
+## 第 9 步：用授權 Policy 管理後台權限
+
+<!--
+回到 EShop。講義這一章用角色控管後台：Controller 上寫 Authorize(Roles = SD.Role_Admin)。
+
+真實的咖啡店會遇到這樣的需求：店員也要能上架商品、看營運總覽，但分類和分店只有老闆能改；而且只有「已經分派到某間分店」的店員，才可以進後台。這種規則用角色字串就不好寫了，這一步我們改用 ASP.NET Core 的授權 Policy。
+-->
+
+---
+
+# EShop 第 9 步：用授權 Policy 管理後台權限
+### 任務說明
+
+1. 完成本章的 Identity、`ApplicationUser`、角色、`DbInitializer`、客製化註冊與分店管理
+2. 登入時把使用者的**所屬分店**寫進 Cookie（claim：`StoreId`）
+3. 在 `Program.cs` 定義兩個 Policy，Controller 只寫 Policy 名稱：
+
+| Policy | 規則 | 套用在 |
+| --- | --- | --- |
+| `SD.Policy_Staff` | Admin，**或**有所屬分店的 Employee | 營運總覽、商品管理 |
+| `SD.Policy_Admin` | 只有 Admin | 分類管理、分店管理 |
+
+4. 導覽列的「後台管理」選單依 Policy 顯示；`DbInitializer` 多建立一位信義店店員 `employee@eshop.com`
+5. 測試：匿名 → 轉到登入頁；沒有分店的 Employee → 拒絕存取；信義店店員 → 可進營運總覽，不能進分類管理
+
+<!--
+第九步的第一項是講義的內容，第二項開始是延伸任務。
+
+第二項，登入的時候，Identity 會把使用者的資訊變成一張「通行證」存進 Cookie，裡面的每一條資訊就叫做 claim。我們要在通行證上多寫一條「我屬於哪間分店」。
+
+第三項定義兩個 Policy。Policy 就像公司的門禁規則表：規則集中寫在一個地方，每扇門上只要貼「員工」或「主管」就好。以後規則改了，例如工讀生也能看營運總覽，只要改 Program.cs 一個地方。
+
+第四項讓選單也依照同一套規則顯示，第五項用測試把整張權限表驗證一遍。
+-->
+
+---
+
+# EShop 第 9 步：解題提示
+### 把所屬分店寫進 claim
+
+```csharp
+// eshop/EShop.Web/Services/ApplicationUserClaimsPrincipalFactory.cs
+// 登入時把「所屬分店」寫進 Cookie，授權時就不用再查資料庫
+public class ApplicationUserClaimsPrincipalFactory(
+    UserManager<ApplicationUser> userManager,
+    RoleManager<IdentityRole> roleManager,
+    IOptions<IdentityOptions> options)
+    : UserClaimsPrincipalFactory<ApplicationUser, IdentityRole>(
+        userManager, roleManager, options)
+{
+    protected override async Task<ClaimsIdentity> GenerateClaimsAsync(
+        ApplicationUser user)
+    {
+        var identity = await base.GenerateClaimsAsync(user);
+        if (user.StoreId is int storeId)
+        {
+            identity.AddClaim(new Claim(SD.Claim_StoreId, storeId.ToString()));
+        }
+        return identity;
+    }
+}
+```
+
+<!--
+Identity 產生通行證的工作，是由 UserClaimsPrincipalFactory 負責的。我們繼承它，覆寫 GenerateClaimsAsync。
+
+先呼叫 base，拿到 Identity 原本就會放的 claim，包括使用者編號、名稱和角色。接著判斷這個使用者有沒有 StoreId，有的話就多加一條 StoreId 的 claim。
+
+這樣做的好處是：分店資訊登入的時候就寫進 Cookie 了，之後每個請求做授權判斷，都不用再查一次資料庫。
+
+建構子的三個參數原封不動傳給父類別，這是 primary constructor 搭配繼承的寫法。
+-->
+
+---
+
+# EShop 第 9 步：解題提示（續）
+### 註冊 claim 工廠與 Policy
+
+```csharp
+// eshop/EShop.Web/Program.cs
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddClaimsPrincipalFactory<ApplicationUserClaimsPrincipalFactory>()
+    .AddDefaultTokenProviders()
+    .AddDefaultUI();
+// ...
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(SD.Policy_Admin, p => p.RequireRole(SD.Role_Admin))
+    .AddPolicy(SD.Policy_Staff, p => p.RequireAssertion(context =>
+        context.User.IsInRole(SD.Role_Admin) ||
+        (context.User.IsInRole(SD.Role_Employee) &&
+         context.User.HasClaim(c => c.Type == SD.Claim_StoreId))));
+```
+
+```csharp
+// eshop/EShop.Web/Areas/Admin/Controllers/CategoryController.cs
+[Area("Admin")]
+[Authorize(Policy = SD.Policy_Admin)]
+public class CategoryController(IUnitOfWork unitOfWork) : Controller
+```
+
+<!--
+在 AddIdentity 的設定鏈加上 AddClaimsPrincipalFactory，Identity 就會改用我們的工廠產生通行證。
+
+AddAuthorizationBuilder 用來定義 Policy。Admin 這個 Policy 很單純，RequireRole 就好。Staff 的規則比較複雜，用 RequireAssertion 寫一段判斷：是 Admin，或者是 Employee 而且有 StoreId 這個 claim。
+
+Controller 上的 Authorize 從 Roles 改成 Policy，寫的是 SD 裡的常數。CategoryController 和 StoreController 用 Admin；ProductController、DashboardController 用 Staff。
+
+導覽列要用同一套規則判斷，在 _Layout 用 @inject 注入 IAuthorizationService，呼叫 AuthorizeAsync(User, SD.Policy_Staff)，成功才顯示後台選單。
+-->
+
+---
+
+# EShop 第 9 步：解題提示（續 2）
+### 測試用的登入：從標頭讀出身分
+
+```csharp
+// eshop/EShop.Tests/TestAuthHandler.cs
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        if (!Request.Headers.TryGetValue(Header, out var value))
+            return Task.FromResult(AuthenticateResult.NoResult());   // 沒帶標頭 = 匿名
+
+        var parts = value.ToString().Split(';');
+        List<Claim> claims =
+        [
+            new(ClaimTypes.Name, "tester"),
+            new(ClaimTypes.Role, parts[0]),
+        ];
+        if (parts.Length > 1) claims.Add(new(SD.Claim_StoreId, parts[1]));
+```
+
+- 在測試網站註冊這個驗證方式，並設為 `DefaultAuthenticateScheme`
+- `CreateClientAs("Employee;1")`：以「信義店員工」的身分發出請求
+
+<!--
+要測試權限，就得用不同的身分登入。每個測試都真的去填登入表單太麻煩了，所以我們寫一個測試專用的驗證處理器。
+
+它從請求標頭 X-Test-User 讀出身分，格式是「角色分號分店編號」。沒有標頭就回傳 NoResult，代表匿名；有標頭就組出角色和 StoreId 的 claim，當作已經登入。
+
+在 EShopWebFactory 裡註冊這個驗證方式，設成預設的驗證方式；但沒有登入時的轉址、拒絕存取，還是交給 Identity 的 Cookie 處理，這樣才測得到真實的轉址行為。
+-->
+
+---
+
+# EShop 第 9 步：解題提示（續 3）
+### 權限矩陣測試
+
+```csharp
+// eshop/EShop.Tests/AuthorizationTests.cs
+    [Theory]
+    // 身分（角色;分店）    網址                  預期
+    [InlineData(null, "/Admin/Dashboard", Login)]
+    [InlineData("Customer", "/Admin/Dashboard", Denied)]
+    [InlineData("Employee", "/Admin/Dashboard", Denied)]      // 員工沒有分店
+    [InlineData("Employee;1", "/Admin/Dashboard", Ok)]
+    [InlineData("Employee;1", "/Admin/Product", Ok)]
+    [InlineData("Employee;1", "/Admin/Category", Denied)]
+// ...
+        var location = response.Headers.Location?.ToString() ?? "";
+        var actual = response.StatusCode switch
+        {
+            HttpStatusCode.OK => Ok,
+            _ when location.Contains("/Account/Login") => Login,
+            _ when location.Contains("/Account/AccessDenied") => Denied,
+            var code => code.ToString(),
+        };
+        Assert.Equal(expected, actual);
+```
+
+<!--
+最後是權限矩陣測試。每一行 InlineData 就是權限表的一格：什麼身分、打哪個網址、預期什麼結果。
+
+回應的判斷用 switch expression：200 就是可以進入；轉址到 Login 代表沒有登入；轉址到 AccessDenied 代表登入了但權限不夠。
+
+大家看第三行：一樣是 Employee，沒有分店就被拒絕；第四行有分店就可以進營運總覽，但第六行的分類管理還是不行。這張表跑過一遍，我們就能很有信心地說：權限規則和我們設計的一模一樣。
+
+另外還有測試驗證 DbInitializer 建好了角色和帳號，以及 claim 工廠真的會替信義店店員加上 StoreId。
+-->
+
+---
 
 # 總結
 
@@ -1321,6 +1509,7 @@ Passkey 讓使用者用手機或電腦的指紋、臉部辨識登入，不需要
 | 9-3 角色權限 | `SD.Role_*`、`DbInitializer` 建立角色與管理員、`[Authorize(Roles = ...)]`、`User.IsInRole` |
 | 9-4 客製化註冊 | `ApplicationUser : IdentityUser`、角色**只能在後端**決定 |
 | 9-5 分店 | `Store` + `ApplicationUser.StoreId?`，員工註冊時選擇分店 |
+| **EShop** 第 9 步 | 自訂 `UserClaimsPrincipalFactory` 加上 `StoreId` claim；`Staff` / `AdminOnly` Policy；權限矩陣測試 |
 
 下一章我們會介紹 **購物車與訂單系統**，讓登入的會員可以把咖啡豆加入購物車、結帳下單。
 
@@ -1328,6 +1517,8 @@ Passkey 讓使用者用手機或電腦的指紋、臉部辨識登入，不需要
 我們來總結這一章。
 
 我們用 ASP.NET Core Identity 建立了會員系統，Scaffold 了註冊登入頁面，用角色控管誰能進後台，擴充了會員資料，最後建立分店並讓員工隸屬於分店。
+
+EShop 在這一章有了會員和權限。我們把所屬分店寫進登入的 claim，再用 Policy 把「誰能進哪個後台頁面」集中寫在 Program.cs，Controller 只要寫 Policy 名稱；最後用一張權限矩陣測試，確認每一種身分的結果都和設計一樣。
 
 現在 EShop 有了會員，後台也被保護起來了。下一章是整門課的最後一章，我們會做出購物網站最核心的功能：購物車和訂單。登入的會員可以把商品加入購物車、修改數量、結帳下單，系統會扣除庫存，後台也能管理訂單狀態。
 -->

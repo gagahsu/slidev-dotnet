@@ -13,13 +13,14 @@ public class ProductRepository(ApplicationDbContext db)
     // 第 3 章的查詢搬進資料庫：IQueryable 一路串條件，最後才產生 SQL
     public async Task<PagedResult<Product>> SearchAsync(ProductQuery query)
     {
-        IQueryable<Product> products = _db.Products.AsNoTracking()
-                                                   .Include(p => p.Category);
+        IQueryable<Product> products = _db.Products
+            .AsNoTracking()
+            .Include(p => p.Category);
 
-        if (query.Keyword is { Length: > 0 } keyword)
+        if (!string.IsNullOrWhiteSpace(query.Keyword))
         {
-            products = products.Where(p => p.Name.Contains(keyword)
-                                        || p.Origin.Contains(keyword));
+            products = products.Where(p => p.Name.Contains(query.Keyword)
+                                        || p.Origin.Contains(query.Keyword));
         }
         if (query.CategoryId is int categoryId)
         {
@@ -34,11 +35,13 @@ public class ProductRepository(ApplicationDbContext db)
         };
 
         var page = Math.Max(1, query.Page);
-        var total = await products.CountAsync();            // SELECT COUNT(*)
-        var items = await products.Skip((page - 1) * query.PageSize)
-                                  .Take(query.PageSize)
-                                  .ToListAsync();           // OFFSET ... FETCH
-        return new PagedResult<Product>(items, page, query.PageSize, total);
+        var total = await products.CountAsync();         // SELECT COUNT(*)
+        var items = await products
+            .Skip((page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToListAsync();                              // OFFSET ... FETCH
+        return new PagedResult<Product>(
+            items, page, query.PageSize, total);
     }
 
     // GroupBy 也交給資料庫：GROUP BY + COUNT、AVG、SUM

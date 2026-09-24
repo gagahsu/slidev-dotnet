@@ -31,7 +31,8 @@ public class TestAuthHandler(
         ];
         if (parts.Length > 1 && parts[1] != "") claims.Add(new(SD.Claim_StoreId, parts[1]));
 
-        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName));
-        return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, SchemeName)));
+        var identity = new ClaimsIdentity(claims, SchemeName);
+        var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName);
+        return Task.FromResult(AuthenticateResult.Success(ticket));
     }
 }

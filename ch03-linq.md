@@ -62,12 +62,15 @@ layout: default
 - **3-4 聚合與單筆抓取：FirstOrDefault、Any、Count、GroupBy**
 - **3-5 延遲執行 vs 立即執行（ToList）**
 - **3-6 IEnumerable vs IQueryable**
+- **EShop 專案實作** — 第 3 步：記憶體商品目錄與 LINQ 查詢
 - **總結**
 
 <!--
 這一章有六個小節。
 
 第一節先學委派和 Lambda，因為 LINQ 的每個方法都要傳 Lambda 進去，不懂 Lambda 就看不懂 LINQ。接著介紹 LINQ 的兩種寫法，然後是最常用的方法。最後兩節是觀念：延遲執行，以及 IEnumerable 和 IQueryable 的差別，這兩個觀念如果沒搞懂，之後查資料庫很容易踩到效能地雷。
+
+最後的 EShop 專案實作，我們會用 LINQ 替 EShop 寫出搜尋、排序、分頁與分類統計。
 -->
 
 ---
@@ -1204,6 +1207,196 @@ Search 用動態組合查詢，GetById 用 FirstOrDefault，回傳型別是 Prod
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# EShop 專案實作
+## 第 3 步：記憶體商品目錄與 LINQ 查詢
+
+<!--
+回到 EShop。上一步我們有了 Product 類別，但店裡還沒有任何一包豆子。
+
+逛購物網站的時候，我們最常做的事就是：輸入關鍵字搜尋、選一個分類、依價格排序、翻到下一頁。這一步我們就用這一章學的 LINQ，把這些查詢功能寫出來。資料庫要到第五章才會出現，所以我們先把商品放在記憶體裡。
+-->
+
+---
+
+# EShop 第 3 步：記憶體商品目錄與 LINQ 查詢
+### 任務說明
+
+1. `Data/SeedData.cs`：3 個分類、6 包咖啡豆（和本章範例資料相同）
+2. `record ProductQuery`：關鍵字、分類、排序方式、頁碼、每頁筆數（都可以省略）
+3. `record PagedResult<T>`：這一頁的資料、總筆數、總頁數、有沒有上一頁／下一頁
+4. `Services/ProductQueryService`：
+
+| 方法 | 功能 |
+| --- | --- |
+| `GetById(id)` | 找不到回傳 `null` |
+| `Search(query)` | 關鍵字（名稱或產地）→ 分類 → 排序 → 分頁（`Skip` / `Take`） |
+| `GetCategorySummaries()` | 依分類分組：款數、平均價格、總庫存 |
+
+5. 在 `EShop.Tests` 為每個方法寫測試，例如：搜尋「衣索比亞」只找到 2 筆、第 2 頁只剩 2 筆
+
+<!--
+第三步要做一個「商品目錄」的查詢服務。
+
+先準備資料：分類三個、咖啡豆六包，跟這一章的範例資料一模一樣，大家可以直接沿用。
+
+接著定義兩個 record：ProductQuery 是查詢條件，每個參數都有預設值，所以都可以省略；PagedResult 是查詢結果，除了這一頁的商品，還要告訴畫面總共有幾頁、能不能往前往後翻。
+
+ProductQueryService 有三個方法，表格裡寫得很清楚。Search 是重點，條件要一個一個串上去，最後才分頁。
+
+最後別忘了寫測試。有了上一步的測試專案，這一步只要新增一個測試類別就好。
+-->
+
+---
+
+# EShop 第 3 步：解題提示
+### 查詢條件與分頁結果
+
+```csharp
+// eshop/EShop.Web/Models/ProductQuery.cs
+// 商品列表的查詢條件：每個參數都可以省略
+public record ProductQuery(
+    string? Keyword = null,
+    int? CategoryId = null,
+    ProductSort Sort = ProductSort.Default,
+    int Page = 1,
+    int PageSize = 4);
+```
+
+```csharp
+// eshop/EShop.Web/Models/PagedResult.cs
+// 一頁的資料，加上計算頁碼需要的資訊
+public record PagedResult<T>(
+    List<T> Items, int Page, int PageSize, int TotalCount)
+{
+    public int TotalPages => (TotalCount + PageSize - 1) / PageSize;
+    public bool HasPrevious => Page > 1;
+    public bool HasNext => Page < TotalPages;
+}
+```
+
+<!--
+ProductQuery 的每個參數都有預設值，所以建立的時候可以只給需要的，例如 new ProductQuery(Keyword: "衣索比亞")，用具名參數只指定關鍵字。ProductSort 是一個 enum，有預設、價格低到高、價格高到低三種。
+
+PagedResult 是泛型的 record，T 可以是任何型別，這一步放的是 Product，之後也可以放訂單。
+
+TotalPages 的算法是一個常見的小技巧：總筆數加上每頁筆數減一，再整數相除，就等於無條件進位。六筆、每頁四筆，(6 + 3) / 4 = 2，總共兩頁。
+-->
+
+---
+
+# EShop 第 3 步：解題提示（續）
+### Search：條件一個一個串上去
+
+```csharp
+// eshop/EShop.Web/Services/ProductQueryService.cs
+    public PagedResult<Product> Search(ProductQuery query)
+    {
+        IEnumerable<Product> result = products;
+
+        if (!string.IsNullOrWhiteSpace(query.Keyword))
+        {
+            result = result.Where(p => p.Name.Contains(query.Keyword)
+                                    || p.Origin.Contains(query.Keyword));
+        }
+        if (query.CategoryId is int categoryId)
+        {
+            result = result.Where(p => p.CategoryId == categoryId);
+        }
+
+        result = query.Sort switch
+        {
+            ProductSort.PriceAsc => result.OrderBy(p => p.Price),
+            ProductSort.PriceDesc => result.OrderByDescending(p => p.Price),
+            _ => result.OrderBy(p => p.Id),
+        };
+```
+
+<!--
+Search 的寫法是這一章「延遲執行」最好的應用。
+
+一開始 result 就是全部的商品。有關鍵字，就接一個 Where；有選分類，再接一個 Where；最後依排序方式接上 OrderBy。到這裡為止，一行資料都還沒有被篩選，我們只是在「組裝查詢」。
+
+注意 CategoryId is int categoryId 這個寫法，它是上一章學的 pattern matching：如果 CategoryId 有值，就把值取出來放進 categoryId 變數；沒有值就跳過。
+
+排序用 switch expression 選擇，和上一步的會員折扣是一樣的寫法。
+-->
+
+---
+
+# EShop 第 3 步：解題提示（續 2）
+### 分頁與分組統計
+
+```csharp
+// eshop/EShop.Web/Services/ProductQueryService.cs
+        var page = Math.Max(1, query.Page);
+        var matched = result.ToList();   // 立即執行，只篩選一次
+        var items = matched.Skip((page - 1) * query.PageSize)
+                           .Take(query.PageSize)
+                           .ToList();
+        return new PagedResult<Product>(
+            items, page, query.PageSize, matched.Count);
+    }
+// ...
+    public List<CategorySummary> GetCategorySummaries() =>
+        products.GroupBy(p => p.CategoryId)
+                .Select(g => new CategorySummary(
+                    GetCategoryName(g.Key),
+                    g.Count(),
+                    Math.Round(g.Average(p => p.Price)),
+                    g.Sum(p => p.Stock)))
+                .OrderByDescending(s => s.ProductCount)
+                .ToList();
+```
+
+<!--
+接著是分頁。第 page 頁要跳過前面 (page - 1) 乘以每頁筆數的資料，再取每頁筆數那麼多筆，這就是 Skip 加 Take 的標準寫法。
+
+這裡先呼叫一次 ToList，把篩選結果存起來。因為我們同時需要「這一頁的資料」和「總筆數」，如果不先 ToList，Count 和 Skip 會各自把整條查詢從頭跑一次，這就是這一章提醒過的延遲執行陷阱。
+
+GetCategorySummaries 用 GroupBy 依分類分組，每一組算出款數、平均價格和總庫存，再轉成 CategorySummary 這個 record。以範例資料來說，單品咖啡豆有四款，排在第一個。
+-->
+
+---
+
+# EShop 第 3 步：解題提示（續 3）
+### 為查詢服務寫測試
+
+```csharp
+// eshop/EShop.Tests/ProductQueryServiceTests.cs
+    [Fact]
+    public void Search_關鍵字比對名稱或產地()
+    {
+        var result = _service.Search(new ProductQuery(Keyword: "衣索比亞"));
+
+        Assert.Equal(["耶加雪菲", "西達摩"], result.Items.Select(p => p.Name));
+    }
+
+    [Fact]
+    public void Search_分類篩選加價格排序()
+    {
+        var query = new ProductQuery(CategoryId: 1, Sort: ProductSort.PriceDesc);
+
+        var result = _service.Search(query);
+
+        Assert.Equal([450m, 420m, 400m, 380m], result.Items.Select(p => p.Price));
+    }
+```
+
+<!--
+測試的寫法和上一步一樣，分成三段：準備、執行、檢查。
+
+第一個測試搜尋「衣索比亞」，雖然商品名稱裡沒有這四個字，但產地有，所以會找到耶加雪菲和西達摩兩包。
+
+第二個測試同時用分類和排序，單品咖啡豆有四包，價格由高到低應該是 450、420、400、380。
+
+Assert.Equal 的第一個參數可以直接寫 collection expression，第二個參數是 LINQ 的 Select 結果，xUnit 會一個一個元素比對。執行 dotnet test，這一步完成之後總共有 13 個測試。
+-->
+
+---
 
 # 總結
 
@@ -1215,6 +1408,7 @@ Search 用動態組合查詢，GetById 用 FirstOrDefault，回傳型別是 Prod
 | 3-4 聚合與單筆 | `FirstOrDefault` 找不到回傳 null；`Any` 判斷存在；`GroupBy` 分組統計 |
 | 3-5 延遲執行 | 查詢在使用結果時才執行；「條件先串完，最後再 ToList()」 |
 | 3-6 IQueryable | 翻譯成 SQL 在資料庫執行；`ToList()` 是資料庫與記憶體的分界點 |
+| **EShop** 第 3 步 | 記憶體商品目錄：`ProductQuery` 條件串接 `Where` / `OrderBy`、`Skip` / `Take` 分頁、`GroupBy` 統計 |
 
 下一章我們會介紹 **MVC 基本觀念**，看看 ASP.NET Core 網站是怎麼分工合作的。
 
@@ -1224,6 +1418,8 @@ Search 用動態組合查詢，GetById 用 FirstOrDefault，回傳型別是 Prod
 Lambda 讓我們可以把條件當作參數傳遞，這是 LINQ 的基礎。LINQ 有兩種寫法，方法語法是主流。最常用的方法是 Where、Select、OrderBy、FirstOrDefault、Any、Count 和 GroupBy。最後兩個觀念最重要：LINQ 是延遲執行的，而 IQueryable 會把查詢翻譯成 SQL，所以要記得「條件先串完，最後再 ToList」。
 
 學完這一章，大家已經具備查詢資料庫的能力了，只差把資料來源從 List 換成資料庫。
+
+EShop 在這一章有了商品目錄：搜尋、分類篩選、排序、分頁和分類統計，全部用 LINQ 完成，也都有測試保護。現在資料還放在記憶體，第八章換成資料庫的時候，大家會發現查詢的寫法幾乎一樣。
 
 下一章我們會介紹 MVC 基本觀念，看看 Model、View、Controller 三個角色是怎麼分工合作，完成一個網頁的。
 -->

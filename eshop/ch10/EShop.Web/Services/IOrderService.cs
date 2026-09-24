@@ -10,5 +10,6 @@ public record PlaceOrderResult(int? OrderId, string? Error)
 
 public interface IOrderService
 {
-    Task<PlaceOrderResult> PlaceOrderAsync(string userId, OrderHeader shippingInfo);
+    Task<PlaceOrderResult> PlaceOrderAsync(
+        string userId, OrderHeader shippingInfo);
 }

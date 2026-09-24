@@ -62,10 +62,13 @@ layout: default
 - **6-2 IoC 控制反轉**
 - **6-3 DI 依賴注入** — 介面、註冊、建構子注入
 - **6-4 服務的生命週期** — Transient、Scoped、Singleton
+- **EShop 專案實作** — 第 6 步：商品目錄改用依賴注入
 - **總結**
 
 <!--
 這一章有四個小節，觀念比較抽象，所以我們會用一個「運費計算」的例子貫穿整章，一步一步把程式從「緊耦合」改成「依賴注入」。
+
+最後的 EShop 專案實作，我們會把 EShop 的商品目錄和運費服務改成依賴注入，並在測試中實際「換零件」。
 -->
 
 ---
@@ -923,6 +926,150 @@ public class OrderNotifyController(
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# EShop 專案實作
+## 第 6 步：商品目錄改用依賴注入
+
+<!--
+回到 EShop。還記得第四步的 ProductsController 嗎？它自己 new 了一個 ProductQueryService，而且把資料來源寫死成 SeedData。
+
+這就是這一章一開始說的「緊耦合」：Controller 和記憶體資料綁死了，第八章要換成資料庫，就得回頭改 Controller；想在測試裡換一份假資料，也沒辦法。這一步我們就用 DI 把它鬆開。
+-->
+
+---
+
+# EShop 第 6 步：商品目錄改用依賴注入
+### 任務說明
+
+1. 把本章的 `IShippingService`、`BlackCatShipping`、`ConvenienceStoreShipping`、`CheckoutController` 加進 EShop
+2. 定義介面 `IProductCatalog`；把 `ProductQueryService` 改名為 `InMemoryProductCatalog` 並實作這個介面
+3. 在 `Program.cs` 註冊：`IShippingService` 用 **Scoped**、`IProductCatalog` 用 **Singleton**（說明理由）
+4. `ProductsController` 改用**建構子注入**取得 `IProductCatalog` 與 `IShippingService`
+5. 商品詳情頁顯示「運費試算：單買一包，黑貓宅急便 運費 150 元」
+6. 測試：用 `ConfigureTestServices` 換成**超商取貨**與假的商品目錄，Controller 一行都不用改
+
+<!--
+第六步的任務有六項。
+
+前兩項是準備：把這一章的運費服務加進 EShop，再替商品目錄定義一個介面。原本的 ProductQueryService 改名叫 InMemoryProductCatalog，名字直接說明「這是放在記憶體的目錄」，第八章會有資料庫版本。
+
+第三項是註冊。運費服務照講義用 Scoped；商品目錄要選哪一種生命週期，請大家想一想理由再決定。
+
+第四、五項把 ProductsController 改成建構子注入，並在詳情頁顯示運費試算。
+
+最後一項最能體會 DI 的好處：測試的時候，我們可以把物流商和商品目錄換成別的，看看 Controller 需不需要改。
+-->
+
+---
+
+# EShop 第 6 步：解題提示
+### 定義介面、註冊服務
+
+```csharp
+// eshop/EShop.Web/Services/IProductCatalog.cs
+// 商品目錄：Controller 只認得這個介面，不知道資料放在哪裡
+public interface IProductCatalog
+{
+    List<Category> GetCategories();
+    Product? GetById(int id);
+    PagedResult<Product> Search(ProductQuery query);
+    List<CategorySummary> GetCategorySummaries();
+}
+```
+
+```csharp
+// eshop/EShop.Web/Program.cs
+// 有人要 IShippingService 時，給他 BlackCatShipping
+builder.Services.AddScoped<IShippingService, BlackCatShipping>();
+// 記憶體目錄：資料唯讀、大家共用，整個網站只要一份
+builder.Services.AddSingleton<IProductCatalog>(
+    new InMemoryProductCatalog(SeedData.Products, SeedData.Categories));
+```
+
+<!--
+介面就是上一步 ProductQueryService 的四個公開方法，InMemoryProductCatalog 只要在類別名稱後面加上冒號 IProductCatalog 就完成了。
+
+註冊的時候，商品目錄選 Singleton。理由有兩個：第一，這份資料是唯讀的，不會被任何請求修改，大家共用一份不會互相干擾；第二，它沒有依賴任何 Scoped 的服務，例如 DbContext，所以不會發生這一章提到的「Singleton 注入 Scoped」的錯誤。
+
+AddSingleton 還有一種寫法，直接傳入一個已經建立好的物件。因為 InMemoryProductCatalog 的建構子需要兩份清單，我們自己 new 好交給容器保管。
+-->
+
+---
+
+# EShop 第 6 步：解題提示（續）
+### 建構子注入
+
+```csharp
+// eshop/EShop.Web/Controllers/ProductsController.cs
+[Route("products")]
+public class ProductsController(IProductCatalog catalog, IShippingService shipping)
+    : Controller
+{
+// ...
+    // GET /products/4
+    [HttpGet("{id:int}")]
+    public IActionResult Details(int id)
+    {
+        var product = catalog.GetById(id);
+        if (product is null)
+        {
+            return NotFound();
+        }
+
+        // 運費試算：單買一包要付多少運費
+        ViewData["ShippingName"] = shipping.Name;
+        ViewData["ShippingFee"] = shipping.Calculate(product.Price);
+        return View(product);
+    }
+```
+
+<!--
+ProductsController 用 primary constructor 伸出兩隻手：一隻要商品目錄，一隻要運費服務。原本那行 new ProductQueryService 刪掉，Controller 完全不知道資料是從哪裡來的。
+
+Details 多了運費試算：用商品單價呼叫 shipping.Calculate，把物流商名稱和運費放進 ViewData，View 再顯示出來。耶加雪菲 450 元，沒有滿 1500，所以黑貓的運費是 150 元。
+-->
+
+---
+
+# EShop 第 6 步：解題提示（續 2）
+### 測試時換零件
+
+```csharp
+// eshop/EShop.Tests/DependencyInjectionTests.cs
+    [Fact]
+    public async Task 換掉物流商與目錄_Controller不用改()
+    {
+        var client = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services =>
+            {
+                // 後註冊的會蓋掉先註冊的
+                services.AddScoped<IShippingService, ConvenienceStoreShipping>();
+                services.AddSingleton<IProductCatalog>(new InMemoryProductCatalog(
+                    [new() { Id = 1, Name = "測試豆", Origin = "測試", Price = 100 }],
+                    [new() { Id = 1, Name = "測試分類" }]));
+            })).CreateClient();
+
+        var html = await client.GetHtmlAsync("/products/1");
+
+        Assert.Contains("測試豆", html);
+        Assert.Contains("超商取貨 運費 60 元", html);
+    }
+```
+
+<!--
+這個測試最能看出 DI 的價值。
+
+WithWebHostBuilder 可以在測試裡調整網站的設定，ConfigureTestServices 讓我們重新註冊服務。同一個介面註冊兩次，容器會用最後註冊的那一個，所以這裡把物流商換成超商取貨，商品目錄換成只有一包「測試豆」的假資料。
+
+然後請求 /products/1，頁面上出現了測試豆，運費變成超商的 60 元。整個過程，ProductsController 和 View 一行都沒有改。這就是這一章一直強調的：使用服務的程式碼，和決定用哪個服務，被分開了。
+
+另外還有一個測試，在兩個不同的 scope 取出服務，驗證 Singleton 是同一個物件、Scoped 是不同的物件。
+-->
+
+---
 
 # 總結
 
@@ -932,6 +1079,7 @@ public class OrderNotifyController(
 | 6-2 IoC | 設計概念：「把物件的控制權交給外部容器管理」 |
 | 6-3 DI | 實作方式：介面 + `builder.Services.AddXxx<介面, 實作>()` + 建構子注入 |
 | 6-4 生命週期 | Transient 每次新建、**Scoped 每個請求一個（DbContext）**、Singleton 全站一個 |
+| **EShop** 第 6 步 | `IProductCatalog`（Singleton）與 `IShippingService`（Scoped）建構子注入；測試用 `ConfigureTestServices` 換零件 |
 
 下一章我們會介紹 **系統架構與分層**，用 DI 把資料存取抽成 Repository 與 UnitOfWork。
 
@@ -941,6 +1089,8 @@ public class OrderNotifyController(
 類別自己 new 具體類別會造成緊耦合。IoC 是把控制權交給外部容器的概念，DI 則是實作方式：定義介面、在 Program.cs 註冊、在建構子要求注入。註冊時要選擇生命週期，DbContext 是 Scoped，每個請求一個。
 
 現在大家應該能完全看懂 CategoryController 的建構子了。
+
+EShop 的 ProductsController 在這一章不再自己 new 服務了：商品目錄和運費服務都由 DI 容器注入。我們在測試裡把物流商和商品目錄換掉，Controller 一行都不用改，這就是鬆耦合的威力。
 
 不過目前 Controller 還是直接使用 DbContext，資料存取的程式碼都寫在 Controller 裡。下一章我們會介紹分層架構，用這一章學的 DI，把資料存取抽成 Repository 和 UnitOfWork，讓 Controller 變得更乾淨。
 -->

@@ -14,7 +14,8 @@ public class ApplicationUserClaimsPrincipalFactory(
     : UserClaimsPrincipalFactory<ApplicationUser, IdentityRole>(
         userManager, roleManager, options)
 {
-    protected override async Task<ClaimsIdentity> GenerateClaimsAsync(ApplicationUser user)
+    protected override async Task<ClaimsIdentity> GenerateClaimsAsync(
+        ApplicationUser user)
     {
         var identity = await base.GenerateClaimsAsync(user);
         if (user.StoreId is int storeId)

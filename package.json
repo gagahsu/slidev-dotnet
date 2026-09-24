@@ -16,7 +16,10 @@
     "ch08": "slidev ch08-product.md",
     "ch09": "slidev ch09-identity.md",
     "ch10": "slidev ch10-cart-order.md",
-    "export:all": "node scripts/export-all.mjs"
+    "export:all": "node scripts/export-all.mjs",
+    "check:project": "node scripts/check-project.mjs",
+    "check:width": "python3 scripts/check-line-width.py",
+    "check:overflow": "node scripts/check-overflow.mjs"
   },
   "dependencies": {
     "@slidev/cli": "^52.14.2",

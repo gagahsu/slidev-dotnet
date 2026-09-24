@@ -23,8 +23,9 @@ public class CategoryControllerTests : IDisposable
     public async Task Create_名稱重複_回到表單(string name)
     {
         var controller = CreateController();
+        var category = new Category { Name = name, DisplayOrder = 9 };
 
-        var result = await controller.Create(new Category { Name = name, DisplayOrder = 9 });
+        var result = await controller.Create(category);
 
         Assert.IsType<ViewResult>(result);
         Assert.True(controller.ModelState.ContainsKey(nameof(Category.Name)));
@@ -59,8 +60,9 @@ public class CategoryControllerTests : IDisposable
     public async Task Edit_改成別人的名稱_回到表單()
     {
         var controller = CreateController();
+        var category = new Category { Id = 3, Name = "單品咖啡豆", DisplayOrder = 3 };
 
-        var result = await controller.Edit(new Category { Id = 3, Name = "單品咖啡豆", DisplayOrder = 3 });
+        var result = await controller.Edit(category);
 
         Assert.IsType<ViewResult>(result);
         Assert.False(controller.ModelState.IsValid);

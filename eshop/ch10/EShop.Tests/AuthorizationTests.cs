@@ -21,15 +21,17 @@ public class AuthorizationTests(EShopWebFactory factory) : IClassFixture<EShopWe
     [InlineData("Admin", "/Admin/Dashboard", Ok)]
     [InlineData("Admin", "/Admin/Category", Ok)]
     [InlineData("Admin", "/Admin/Store", Ok)]
-    public async Task 後台頁面依policy授權(string? user, string url, string expected)
+    public async Task 後台頁面依policy授權(
+        string? user, string url, string expected)
     {
         var response = await factory.CreateClientAs(user).GetAsync(url);
 
+        var location = response.Headers.Location?.ToString() ?? "";
         var actual = response.StatusCode switch
         {
             HttpStatusCode.OK => Ok,
-            HttpStatusCode.Redirect when IsRedirectTo(response, "/Account/Login") => Login,
-            HttpStatusCode.Redirect when IsRedirectTo(response, "/Account/AccessDenied") => Denied,
+            _ when location.Contains("/Account/Login") => Login,
+            _ when location.Contains("/Account/AccessDenied") => Denied,
             var code => code.ToString(),
         };
         Assert.Equal(expected, actual);
@@ -43,7 +45,4 @@ public class AuthorizationTests(EShopWebFactory factory) : IClassFixture<EShopWe
         Assert.Contains("姓名", html);
         Assert.DoesNotContain("-- 選擇角色 --", html);   // 只有 Admin 看得到角色欄位
     }
-
-    private static bool IsRedirectTo(HttpResponseMessage response, string path) =>
-        response.Headers.Location?.ToString().Contains(path) == true;
 }

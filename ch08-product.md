@@ -66,12 +66,15 @@ layout: default
 - **8-6 儲存圖片路徑與靜態檔案管理**
 - **8-7 DataTable 實作**
 - **8-8 前台首頁建立與展示**
+- **EShop 專案實作** — 第 8 步：商品查詢改由資料庫執行
 - **總結**
 
 <!--
 這一章有八個小節，是整門課最長的一章。
 
 前兩節建立商品的基本功能，第三節建立商品和分類的關聯，第四、五節學習 ViewModel 並合併新增和編輯頁面，第六節處理圖片上傳，第七節用 DataTable 改善後台列表，第八節完成前台首頁。
+
+最後的 EShop 專案實作，我們會讓記憶體目錄退場，把第三章的搜尋、排序、分頁與統計全部改在資料庫執行。
 -->
 
 ---
@@ -1712,6 +1715,188 @@ HomeVM 把首頁需要的四種資料全部包在一起，View 裡就能用 Mode
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# EShop 專案實作
+## 第 8 步：商品查詢改由資料庫執行
+
+<!--
+回到 EShop。講義這一章把商品存進了資料庫，後台可以新增、修改、上傳圖片，前台首頁也有了商品卡片。
+
+但是大家有沒有發現一個問題：我們第四步做的 /products 搜尋頁，查的還是記憶體裡那六包豆子！後台新增的商品，搜尋頁完全看不到。這一步我們就讓記憶體目錄正式退場，把第三章寫的搜尋、排序、分頁，全部搬進資料庫執行。
+-->
+
+---
+
+# EShop 第 8 步：商品查詢改由資料庫執行
+### 任務說明
+
+1. 完成本章的 Product（關聯、`ProductVM`、Upsert、圖片上傳、DataTables、前台首頁與詳情頁）
+2. 刪除記憶體目錄（`SeedData`、`IProductCatalog`、`InMemoryProductCatalog`），其餘三包豆子改用 `HasData` 種子資料
+3. `IProductRepository` 新增兩個方法，**全部在資料庫執行**：
+
+| 方法 | 對應的 SQL |
+| --- | --- |
+| `SearchAsync(ProductQuery)` | `WHERE … LIKE`、`ORDER BY`、`OFFSET … FETCH`，另外一句 `COUNT(*)` |
+| `GetCategorySummariesAsync()` | `GROUP BY` + `COUNT`、`AVG`、`SUM` |
+
+4. `/products` 與營運總覽改用 `IUnitOfWork`；「查看詳情」連到講義的 `Home/Details`
+5. 詳情頁的運費試算改用 `@inject` 直接在 View 注入 `IShippingService`
+
+<!--
+第八步的任務是讓 EShop 只剩一個資料來源：資料庫。
+
+第一項是講義的內容。第二項把記憶體目錄的三個檔案刪掉，講義的種子資料只有三包豆子，我們把第三章另外三包也加進 HasData，這樣列表才有第二頁可以測試分頁。
+
+第三項是重點：在 ProductRepository 加上兩個方法，把第三章的查詢改寫成資料庫版本。表格右邊是 EF Core 會幫我們產生的 SQL，所有篩選、排序、分頁、分組都在資料庫完成，C# 只會拿到需要的那幾筆。
+
+最後，/products 和營運總覽改用 UnitOfWork；詳情頁統一使用講義的 Home/Details，第六步的運費試算也要搬過去。
+-->
+
+---
+
+# EShop 第 8 步：解題提示
+### SearchAsync：同樣的 LINQ，換成 IQueryable
+
+```csharp
+// eshop/EShop.DataAccess/Repository/ProductRepository.cs
+    // 第 3 章的查詢搬進資料庫：IQueryable 一路串條件，最後才產生 SQL
+    public async Task<PagedResult<Product>> SearchAsync(ProductQuery query)
+    {
+        IQueryable<Product> products = _db.Products
+            .AsNoTracking()
+            .Include(p => p.Category);
+
+        if (!string.IsNullOrWhiteSpace(query.Keyword))
+        {
+            products = products.Where(p => p.Name.Contains(query.Keyword)
+                                        || p.Origin.Contains(query.Keyword));
+        }
+        if (query.CategoryId is int categoryId)
+        {
+            products = products.Where(p => p.CategoryId == categoryId);
+        }
+```
+
+<!--
+大家把這一頁和第三步的 Search 放在一起比對，會發現幾乎一模一樣：一樣先拿到全部商品，有關鍵字就接 Where，有分類再接 Where。
+
+差別只在第一行。第三步的 result 是 IEnumerable of Product，資料已經在記憶體裡；這裡的 products 是 IQueryable of Product，它還只是一個「查詢的描述」，一筆資料都還沒拿。這就是第三章 3-6 講的 IEnumerable 和 IQueryable 的差別：同樣的 LINQ，IQueryable 會被 EF Core 翻譯成 SQL，在資料庫執行。
+
+Include 讓查詢順便載入分類，列表頁要顯示分類名稱。
+-->
+
+---
+
+# EShop 第 8 步：解題提示（續）
+### 排序、分頁與產生的 SQL
+
+```csharp
+// eshop/EShop.DataAccess/Repository/ProductRepository.cs
+        var page = Math.Max(1, query.Page);
+        var total = await products.CountAsync();         // SELECT COUNT(*)
+        var items = await products
+            .Skip((page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToListAsync();                              // OFFSET ... FETCH
+```
+
+```sql
+-- 搜尋「衣索比亞」、分類 1、價格高到低、第 2 頁（EF Core 產生的 SQL 節錄）
+SELECT [p].[Id], [p].[CategoryId], ..., [p].[Price], [p].[Stock]
+FROM [Products] AS [p]
+WHERE ([p].[Name] LIKE @query_Keyword_contains ESCAPE N'\'
+    OR [p].[Origin] LIKE @query_Keyword_contains0 ESCAPE N'\')
+  AND [p].[CategoryId] = @query_CategoryId
+ORDER BY [p].[Price] DESC
+OFFSET @p ROWS FETCH NEXT @p ROWS ONLY
+```
+
+<!--
+排序的 switch expression 和第三步完全相同，這裡就不重複了。
+
+分頁的部分有一個改變：第三步是先 ToList 再 Skip、Take，因為資料本來就在記憶體；現在我們要讓資料庫只回傳這一頁，所以 Skip 和 Take 要接在 IQueryable 後面，最後才呼叫 ToListAsync。總筆數用 CountAsync 另外查一次，它只會回傳一個數字。
+
+下面是 EF Core 實際產生的 SQL。Contains 變成了 LIKE，OrderByDescending 變成 ORDER BY DESC，Skip 和 Take 變成 OFFSET FETCH。所有的值都是參數，不會有 SQL Injection 的問題。
+-->
+
+---
+
+# EShop 第 8 步：解題提示（續 2）
+### GroupBy 在資料庫執行、Controller 改用 UnitOfWork
+
+```csharp
+// eshop/EShop.DataAccess/Repository/ProductRepository.cs
+    // GroupBy 也交給資料庫：GROUP BY + COUNT、AVG、SUM
+    public Task<List<CategorySummary>> GetCategorySummariesAsync() =>
+        _db.Products
+           .GroupBy(p => p.Category!.Name)
+           .OrderByDescending(g => g.Count())
+           .Select(g => new CategorySummary(
+               g.Key, g.Count(), g.Average(p => p.Price), g.Sum(p => p.Stock)))
+           .ToListAsync();
+```
+
+```csharp
+// eshop/EShop.Web/Areas/Customer/Controllers/ProductsController.cs
+    [HttpGet("")]
+    public async Task<IActionResult> Index(ProductQuery query)
+    {
+        ViewData["Query"] = query;
+        ViewData["Categories"] = await unitOfWork.Category.GetAllAsync(
+            orderBy: q => q.OrderBy(c => c.DisplayOrder));
+        return View(await unitOfWork.Product.SearchAsync(query));
+    }
+```
+
+<!--
+分類統計也搬進資料庫。依照分類名稱分組，EF Core 會自動 JOIN Categories 資料表，產生 GROUP BY 加上 COUNT、AVG、SUM。
+
+有一個小地方要注意：排序要寫在 Select 之前，用 g.Count() 排序。如果先 Select 成 CategorySummary 再用 ProductCount 排序，EF Core 沒辦法把 record 的屬性翻譯成 SQL，會丟出例外。
+
+ProductsController 的建構子改成注入 IUnitOfWork，Index 變成 async 方法，呼叫 SearchAsync。View 完全不用改，因為回傳的還是同一個 PagedResult of Product。
+-->
+
+---
+
+# EShop 第 8 步：解題提示（續 3）
+### View 也能注入服務；SQLite 的 decimal 限制
+
+```razor
+@* eshop/EShop.Web/Areas/Customer/Views/Home/Details.cshtml *@
+@model Product
+@inject EShop.Web.Services.IShippingService Shipping
+@* ... *@
+        <div class="alert alert-info">
+            運費試算：單買一包，@Shipping.Name 運費 @Shipping.Calculate(Model.Price) 元
+        </div>
+```
+
+```csharp
+// eshop/EShop.Tests/SqliteModelCustomizer.cs
+    public override void Customize(ModelBuilder modelBuilder, DbContext context)
+    {
+        base.Customize(modelBuilder, context);
+        foreach (var property in modelBuilder.Model.GetEntityTypes()
+                     .SelectMany(t => t.GetProperties())
+                     .Where(p => p.ClrType == typeof(decimal)))
+        {
+            property.SetProviderClrType(typeof(double));
+        }
+    }
+```
+
+<!--
+詳情頁改用講義的 Home/Details，運費試算我們不改 HomeController，而是用 @inject 直接在 View 注入 IShippingService。這是第六章 DI 的另一種用法：只有畫面需要的服務，可以直接交給 View。
+
+最後是測試時遇到的一個坑。SQLite 沒有 decimal 型別，EF Core 的 SQLite 版本不支援用 decimal 欄位排序和加總，講義的 OrderBy(p => p.Price) 在 SQLite 上會直接丟出例外。
+
+解法是在測試專案加一個 ModelCustomizer，只在測試時把所有 decimal 欄位存成 double，再用 ReplaceService 換掉 EF Core 內建的版本。正式環境用的是 SQL Server，完全不受影響。這一步的測試把第三步的查詢測試全部改成資料庫版本，結果一樣全部通過。
+-->
+
+---
 
 # 總結
 
@@ -1724,6 +1909,7 @@ HomeVM 把首頁需要的四種資料全部包在一起，View 裡就能用 Mode
 | 8-6 圖片 | `IWebHostEnvironment.WebRootPath`、Guid 檔名；上傳檔案需 `UseStaticFiles()` |
 | 8-7 DataTable | `Json(new { data })` API + DataTables 2 + SweetAlert2 + `fetch` DELETE |
 | 8-8 前台首頁 | Customer Area、Bootstrap Card、Details 頁 |
+| **EShop** 第 8 步 | 記憶體目錄退場；`SearchAsync` 以 `IQueryable` 產生 `WHERE`／`OFFSET FETCH`，統計用 `GROUP BY`；View 用 `@inject` |
 
 下一章我們會介紹 **會員與權限控管**，用 ASP.NET Core Identity 做出註冊、登入與角色權限。
 
@@ -1731,6 +1917,8 @@ HomeVM 把首頁需要的四種資料全部包在一起，View 裡就能用 Mode
 我們來總結這一章。
 
 我們建立了商品和分類的一對多關聯，學會用 ViewModel 傳遞多種資料，把新增和編輯整合成 Upsert，處理了圖片上傳和靜態檔案，用 DataTables 做出有搜尋排序分頁的後台列表，最後完成了前台的首頁和商品詳細頁。
+
+EShop 在這一章只剩下一個資料來源：資料庫。第三章寫的搜尋、排序、分頁和分類統計，換成 IQueryable 之後幾乎不用改，就全部變成在資料庫執行的 SQL，這就是 LINQ 最大的好處。
 
 現在 EShop 已經是一個可以瀏覽商品的商店了。但目前任何人都能進後台修改商品，這當然不行。下一章我們會介紹 ASP.NET Core Identity，做出會員註冊、登入，並用角色控管誰可以進入後台。
 -->

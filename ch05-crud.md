@@ -65,6 +65,7 @@ layout: default
 - **5-5 Edit 編輯資料**
 - **5-6 Delete 刪除資料**
 - **5-7 TempData & Toastr 通知整合**
+- **EShop 專案實作** — 第 5 步：分類管理與名稱不可重複
 - **總結**
 
 <!--
@@ -73,6 +74,8 @@ layout: default
 前兩節是準備工作：建立專案、連上資料庫。中間四節就是 CRUD 的四個動作。最後一節加上操作成功的通知。
 
 每一節的程式碼都會接續上一節，所以大家要跟著做，不要跳過任何一步。
+
+最後的 EShop 專案實作，我們會把分類管理做進 EShop，並從程式和資料庫兩個層面確保分類名稱不重複。
 -->
 
 ---
@@ -1489,6 +1492,167 @@ DateOnly 是 .NET 6 之後的型別，只有日期沒有時間，EF Core 會對�
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# EShop 專案實作
+## 第 5 步：分類管理與名稱不可重複
+
+<!--
+回到 EShop。到上一章為止，商品和分類都寫死在程式裡，想新增一個分類就得改程式、重新部署。
+
+這一章學會了 EF Core 和 CRUD，我們要讓 EShop 的分類真正存進資料庫，而且還要多做一件講義沒有做完的事：確保分類名稱不會重複。
+-->
+
+---
+
+# EShop 第 5 步：分類管理與名稱不可重複
+### 任務說明
+
+1. 在**沿用 Ch04 的 EShop 方案**中完成本章的分類 CRUD：`ApplicationDbContext`、Migration、`CategoryController` 與四個 View、TempData + Toastr 通知
+2. 分類名稱不可重複（練習 4 只檢查了新增）：
+
+| 情境 | 預期結果 |
+| --- | --- |
+| 新增「配方豆」（已存在） | 回到表單，名稱欄位顯示「此分類名稱已存在」 |
+| 新增「&nbsp;&nbsp;配方豆&nbsp;」（前後有空白） | 先去掉空白，一樣視為重複 |
+| 編輯「配方豆」，名稱不變、只改顯示順序 | 可以儲存（不能和**自己**比） |
+| 兩個人同時新增同一個名稱 | 資料庫的**唯一索引**擋下第二筆 |
+
+3. 用 SQLite in-memory 資料庫寫測試，不需要安裝 SQL Server 也能驗證
+
+<!--
+第五步有兩部分。
+
+第一部分是把這一章的分類 CRUD 做進 EShop。講義是從 dotnet new sln 開始建立新專案，我們的 EShop 從第一章就建好了，所以直接沿用，把 EF Core 套件、DbContext、Controller 和 View 加進去就好。
+
+第二部分是延伸任務。練習 4 在新增的時候檢查了名稱重複，但還有三個漏洞：前後多打了空白就能繞過；編輯的時候如果名稱沒改，會跟自己比對而被擋下；還有兩個人同時送出，兩邊檢查的時候都還沒有這個名稱，結果兩筆都存進去了。
+
+表格的四種情境，就是我們這一步要處理的。最後的測試我們用 SQLite 的記憶體資料庫，大家的電腦就算沒有 SQL Server 也能跑。
+-->
+
+---
+
+# EShop 第 5 步：解題提示
+### 新增、編輯共用同一個檢查
+
+```csharp
+// eshop/EShop.Web/Controllers/CategoryController.cs
+    // 分類名稱不可重複：新增時比對全部，編輯時排除自己
+    private async Task CheckDuplicateNameAsync(Category category)
+    {
+        category.Name = category.Name.Trim();
+        var exists = await db.Categories.AnyAsync(
+            c => c.Name == category.Name && c.Id != category.Id);
+        if (exists)
+        {
+            ModelState.AddModelError(nameof(Category.Name), "此分類名稱已存在");
+        }
+    }
+```
+
+```csharp
+// eshop/EShop.Web/Controllers/CategoryController.cs
+    public async Task<IActionResult> Edit(Category category)
+    {
+        await CheckDuplicateNameAsync(category);
+        if (!ModelState.IsValid) return View(category);
+```
+
+<!--
+我們把檢查寫成一個私有方法，Create 和 Edit 都呼叫它。
+
+第一行先用 Trim 去掉前後空白，這樣「空白配方豆空白」存進去的也會是乾淨的名稱。
+
+AnyAsync 的條件有兩個：名稱相同，而且 Id 不是自己。新增的時候 Id 是 0，資料庫裡沒有 Id 是 0 的分類，所以等於跟全部比；編輯的時候 Id 是自己的編號，就會把自己排除掉。一個條件同時處理了兩種情況。
+
+找到重複的，就用 AddModelError 把錯誤掛在 Name 欄位上，View 裡的 asp-validation-for 就會把訊息顯示在輸入框下面。
+-->
+
+---
+
+# EShop 第 5 步：解題提示（續）
+### 最後一道防線：唯一索引
+
+```csharp
+// eshop/EShop.Web/Data/ApplicationDbContext.cs
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        // 最後一道防線：資料庫層級的唯一索引
+        modelBuilder.Entity<Category>().HasIndex(c => c.Name).IsUnique();
+```
+
+```bash
+dotnet ef migrations add AddUniqueIndexToCategoryName
+dotnet ef database update
+```
+
+```csharp
+// eshop/EShop.Web/Migrations/20260924083435_AddUniqueIndexToCategoryName.cs
+            migrationBuilder.CreateIndex(
+                name: "IX_Categories_Name",
+                table: "Categories",
+                column: "Name",
+                unique: true);
+```
+
+<!--
+程式裡的檢查有一個先天的限制：「先查、再存」中間有時間差。兩個人同時送出，檢查的時候都還沒有這個名稱，兩筆就都存進去了。
+
+真正能保證不重複的，只有資料庫本身。在 OnModelCreating 用 HasIndex 加上 IsUnique，告訴 EF Core 這個欄位要建立唯一索引。
+
+新增一個 Migration，EF Core 會自動產生 CreateIndex，unique 是 true。之後就算有兩筆同名的資料同時寫入，資料庫也會拒絕第二筆。
+
+程式檢查負責給使用者友善的訊息，資料庫的索引負責守住最後一關，兩個一起用才完整。
+-->
+
+---
+
+# EShop 第 5 步：解題提示（續 2）
+### 用 SQLite in-memory 測試
+
+```csharp
+// eshop/EShop.Tests/SqliteTestDb.cs
+    public SqliteTestDb()
+    {
+        _connection.Open();
+        using var db = CreateContext();
+        db.Database.EnsureCreated();   // 依模型建表（含 HasData 種子資料）
+    }
+
+    public ApplicationDbContext CreateContext() =>
+        new(new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(_connection)
+            .Options);
+```
+
+```csharp
+// eshop/EShop.Tests/CategoryControllerTests.cs
+    [Theory]
+    [InlineData("配方豆")]
+    [InlineData("  配方豆 ")]
+    public async Task Create_名稱重複_回到表單(string name)
+    {
+        var controller = CreateController();
+        var category = new Category { Name = name, DisplayOrder = 9 };
+
+        var result = await controller.Create(category);
+
+        Assert.IsType<ViewResult>(result);
+```
+
+<!--
+測試要有資料庫，但我們不想在每一台電腦都裝 SQL Server。這時候可以用 SQLite 的記憶體資料庫：DataSource 等於冒號 memory 冒號，資料只存在記憶體裡，連線關掉就消失，每個測試都是乾淨的。
+
+測試專案要加入 Microsoft.EntityFrameworkCore.Sqlite 套件。EnsureCreated 會依照我們的模型直接建表，也會放入 HasData 的三個分類。
+
+測試直接 new 一個 CategoryController，把測試用的 DbContext 傳進去，然後呼叫 Create。預期結果是回到表單，也就是 ViewResult，而且 ModelState 裡有 Name 的錯誤。
+
+另外還有一個測試直接寫入重複的名稱，確認資料庫會丟出 DbUpdateException，證明唯一索引真的有作用。
+-->
+
+---
 zoom: 0.9
 ---
 
@@ -1503,6 +1667,7 @@ zoom: 0.9
 | 5-5 Edit | `FindAsync` 帶出資料、隱藏欄位 `Id`、`Update` |
 | 5-6 Delete | 確認頁 + POST 刪除、`[ActionName("Delete")]`、`Remove` |
 | 5-7 通知 | `TempData` 跨轉址傳訊息、`_Notification` + Toastr |
+| **EShop** 第 5 步 | 分類 CRUD 存進資料庫；名稱去空白後檢查重複（編輯排除自己）＋唯一索引；SQLite in-memory 測試 |
 
 下一章我們會介紹 **依賴注入（DI）**，解開 `CategoryController(ApplicationDbContext db)` 背後的秘密。
 
@@ -1512,6 +1677,8 @@ zoom: 0.9
 我們建立了 EShop 方案，用 EF Core 連上 SQL Server，透過 Migration 建立資料表，然後完成了分類的新增、查詢、修改、刪除，最後用 TempData 和 Toastr 加上了操作通知。
 
 恭喜大家，這是我們第一個真正連上資料庫的完整功能！之後的商品、購物車、訂單，全部都是用這一章的 CRUD 模式延伸出去的。
+
+EShop 的分類在這一章正式存進資料庫。我們還補上了名稱不可重複的完整檢查：程式裡的檢查負責友善的錯誤訊息，資料庫的唯一索引負責守住最後一關；測試用 SQLite 記憶體資料庫，沒有 SQL Server 也能驗證。
 
 不過有一個問題我們一直沒有解釋：CategoryController 的建構子參數 ApplicationDbContext db，是誰傳進來的？我們從來沒有 new 過它。下一章我們就會介紹依賴注入，解開這個秘密。
 -->

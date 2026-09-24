@@ -23,10 +23,15 @@ public class TestAuthHandler(
             return Task.FromResult(AuthenticateResult.NoResult());   // 沒帶標頭 = 匿名
 
         var parts = value.ToString().Split(';');
-        List<Claim> claims = [new(ClaimTypes.Name, "tester"), new(ClaimTypes.Role, parts[0])];
+        List<Claim> claims =
+        [
+            new(ClaimTypes.Name, "tester"),
+            new(ClaimTypes.Role, parts[0]),
+        ];
         if (parts.Length > 1) claims.Add(new(SD.Claim_StoreId, parts[1]));
 
-        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName));
-        return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, SchemeName)));
+        var identity = new ClaimsIdentity(claims, SchemeName);
+        var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName);
+        return Task.FromResult(AuthenticateResult.Success(ticket));
     }
 }

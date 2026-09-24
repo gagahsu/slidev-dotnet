@@ -61,12 +61,15 @@ layout: default
 - **2-3 條件流程控制** — if、switch expression、pattern matching
 - **2-4 迴圈流程控制** — for、foreach、while、collection expressions
 - **2-5 類別與物件** — 屬性、建構子、primary constructor、record
+- **EShop 專案實作** — 第 2 步：商品模型與會員折扣
 - **總結**
 
 <!--
 這一章分成五個小節，最後一節類別與物件是重點，因為 ASP.NET Core 裡的 Controller、Model、Service，全部都是類別。
 
 如果大家已經學過 Java，會發現 C# 跟 Java 非常像，可以用比較快的速度看過，把注意力放在 C# 特有的語法上，例如屬性、var、string interpolation、switch expression 和 record。
+
+最後的 EShop 專案實作，我們會用這一章的類別、record 和 switch expression 定義商品，並寫下第一個單元測試。
 -->
 
 ---
@@ -1291,6 +1294,204 @@ record 的宣告放在檔案最後面，這是 top-level statements 的規定：
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# EShop 專案實作
+## 第 2 步：商品模型與會員折扣
+
+<!--
+回到我們的 EShop。上一章我們只建好了一個空的網站，裡面什麼資料都沒有。
+
+一間商店最基本的就是「商品」。這一步我們用這一章學的類別、record、enum 和 switch expression，替 EShop 定義商品和分類，再寫一個計算會員折扣的類別。最後，我們還要寫下 EShop 的第一個單元測試，讓電腦幫我們檢查折扣算得對不對。
+-->
+
+---
+
+# EShop 第 2 步：商品模型與會員折扣
+### 任務說明
+
+1. 在 `EShop.Web/Models` 建立 `Category` 與 `Product`：`Name`、`Origin` 用 `required`；`Stock` 用 `field` 關鍵字確保**不小於 0**，並提供 `InStock`
+2. 定義 `enum MemberLevel`（一般、銀卡、金卡）與兩個 record：`CartLine(Product, Quantity)`、`PriceQuote(Subtotal, Discount)`
+3. 建立 `Services/PriceCalculator`（primary constructor 傳入會員等級），用 switch expression 計算折扣：
+
+| 會員等級 | 折扣 |
+| --- | --- |
+| 金卡 | 9 折；小計滿 2,000 元改為 85 折 |
+| 銀卡 | 95 折 |
+| 一般 | 不打折 |
+
+4. 建立 `EShop.Tests`（xUnit）測試專案，驗證上面的折扣規則
+
+<!--
+第二步的任務有四件事。
+
+先定義商品和分類兩個類別。商品名稱和產地一定要有，所以加上 required；庫存不能是負數，我們用 C# 14 的 field 關鍵字在 set 裡把關。
+
+接著定義會員等級的 enum，以及兩個 record：CartLine 代表購物車的一行，PriceQuote 代表試算的結果。這種「只裝資料、不會改變」的小型別，最適合用 record。
+
+第三件事是折扣計算，規則在表格裡：金卡打 9 折，買滿兩千升級成 85 折；銀卡 95 折；一般會員不打折。
+
+最後，我們要建立一個測試專案，把這張表變成自動化的測試。
+-->
+
+---
+
+# EShop 第 2 步：解題提示
+### Product：required 與 field 關鍵字
+
+```csharp
+// eshop/EShop.Web/Models/Product.cs
+public class Product
+{
+    public int Id { get; set; }
+    public required string Name { get; set; }
+    public required string Origin { get; set; }
+    public decimal Price { get; set; }
+    public int CategoryId { get; set; }
+
+    // C# 14 的 field 關鍵字：庫存永遠不會小於 0
+    public int Stock
+    {
+        get;
+        set => field = Math.Max(0, value);
+    }
+
+    public bool InStock => Stock > 0;
+}
+```
+
+<!--
+先看 Product。Name 和 Origin 加上 required，建立商品的時候如果忘了給名稱，編譯器就會直接報錯，不用等到執行才發現。
+
+Stock 用了 field 關鍵字。以前要自己宣告一個私有欄位來存值，現在直接寫 field 就好。set 裡面用 Math.Max 取 0 和 value 比較大的那個，所以就算有人寫 Stock = -5，存進去的也會是 0。
+
+InStock 是一個只有 get 的屬性，用箭頭寫法，庫存大於 0 就是有貨。Category 類別也是同樣的寫法，只有 Id、Name 和 DisplayOrder 三個屬性。
+-->
+
+---
+
+# EShop 第 2 步：解題提示（續）
+### enum 與 record
+
+```csharp
+// eshop/EShop.Web/Models/MemberLevel.cs
+public enum MemberLevel
+{
+    Regular,   // 一般會員
+    Silver,    // 銀卡
+    Gold,      // 金卡
+}
+```
+
+```csharp
+// eshop/EShop.Web/Models/CartLine.cs
+// 購物車的一行：哪個商品、買幾包
+public record CartLine(Product Product, int Quantity)
+{
+    public decimal Subtotal => Product.Price * Quantity;
+}
+
+// 試算結果：小計、折扣、應付金額
+public record PriceQuote(decimal Subtotal, decimal Discount)
+{
+    public decimal Total => Subtotal - Discount;
+}
+```
+
+<!--
+會員等級只有三種，而且是固定的，用 enum 最適合。比起直接用字串 "Gold"，enum 打錯字編譯器會抓到。
+
+CartLine 和 PriceQuote 都用 positional record 的寫法，括號裡的參數會自動變成唯讀屬性。record 的大括號裡一樣可以加屬性，這裡加了 Subtotal 和 Total，都是用其他屬性算出來的。
+
+record 還有一個好處：兩個 PriceQuote 只要內容一樣，用 Equals 比較就會相等，等一下寫測試的時候很方便。
+-->
+
+---
+
+# EShop 第 2 步：解題提示（續 2）
+### PriceCalculator：primary constructor + switch expression
+
+```csharp
+// eshop/EShop.Web/Services/PriceCalculator.cs
+public class PriceCalculator(MemberLevel level)
+{
+    // 會員折扣：金卡 9 折、滿 2000 再升級為 85 折；銀卡 95 折
+    public decimal GetDiscount(decimal subtotal) => (level, subtotal) switch
+    {
+        (_, <= 0) => 0,
+        (MemberLevel.Gold, >= 2000) => Math.Round(subtotal * 0.15m),
+        (MemberLevel.Gold, _) => Math.Round(subtotal * 0.10m),
+        (MemberLevel.Silver, _) => Math.Round(subtotal * 0.05m),
+        _ => 0,
+    };
+
+    public PriceQuote Quote(List<CartLine> lines)
+    {
+        decimal subtotal = 0;
+        foreach (var line in lines)
+        {
+            subtotal += line.Subtotal;
+        }
+        return new PriceQuote(subtotal, GetDiscount(subtotal));
+    }
+}
+```
+
+<!--
+PriceCalculator 用 primary constructor，類別名稱後面的括號直接接收會員等級，類別裡面任何地方都可以用 level。
+
+GetDiscount 是這一步的重點。我們把會員等級和小計組成一個 tuple，再用 switch expression 比對。第一行的底線代表「不管是什麼等級」，只要小計小於等於 0，折扣就是 0。接下來金卡滿兩千、金卡、銀卡，最後的底線是其他情況。
+
+大家注意順序很重要：金卡滿兩千那一行一定要放在金卡那一行前面，因為 switch 是由上往下比對，第一個符合的就會被採用。
+
+Quote 用 foreach 把每一行的小計加起來，再算出折扣，回傳一個 PriceQuote。
+-->
+
+---
+
+# EShop 第 2 步：解題提示（續 3）
+### 補充：用 xUnit 寫第一個單元測試
+
+```bash
+dotnet new xunit -n EShop.Tests
+dotnet sln add EShop.Tests/EShop.Tests.csproj
+dotnet add EShop.Tests reference EShop.Web
+```
+
+```csharp
+// eshop/EShop.Tests/PriceCalculatorTests.cs
+    [Theory]
+    [InlineData(MemberLevel.Regular, 1000, 0)]
+    [InlineData(MemberLevel.Silver, 1000, 50)]
+    [InlineData(MemberLevel.Gold, 1000, 100)]
+    [InlineData(MemberLevel.Gold, 2000, 300)]
+    [InlineData(MemberLevel.Gold, 0, 0)]
+    public void GetDiscount_依會員等級計算折扣(
+        MemberLevel level, int subtotal, int expected)
+    {
+        var calculator = new PriceCalculator(level);
+
+        var discount = calculator.GetDiscount(subtotal);
+
+        Assert.Equal(expected, discount);
+    }
+```
+
+執行 `dotnet test`：`Passed! - Failed: 0, Passed: 7`
+
+<!--
+最後來寫測試。單元測試就是「用程式檢查程式」：我們寫下「金卡買一千元，折扣應該是一百元」，讓電腦幫我們一條一條驗證。
+
+用三個指令建立 xUnit 測試專案，加入方案，再讓它參考 EShop.Web，這樣才能使用 PriceCalculator。
+
+Theory 加上 InlineData，代表同一個測試方法用不同的資料跑好幾次，每一行 InlineData 就是一組輸入和預期結果。這樣上一頁的折扣表，就直接變成了五個測試案例。
+
+在方案資料夾執行 dotnet test，看到 Passed 就代表全部通過。之後每一章我們都會加上新的測試，改程式的時候跑一下，就知道有沒有把原本的功能改壞。
+-->
+
+---
 
 # 總結
 
@@ -1301,6 +1502,7 @@ record 的宣告放在檔案最後面，這是 top-level statements 的規定：
 | 2-3 條件控制 | `if` 執行動作、`switch expression` 算出結果、pattern matching |
 | 2-4 迴圈控制 | `foreach` 最常用、collection expression `[...]` |
 | 2-5 類別與物件 | 屬性 `{ get; set; }`、primary constructor、`required`、`record` |
+| **EShop** 第 2 步 | `Product`（`required`、`field`）、`MemberLevel`、record、switch expression 會員折扣，加上第一個 xUnit 測試 |
 
 下一章我們會介紹 **LINQ**，學會用幾行程式碼完成篩選、排序、分組等資料查詢。
 
@@ -1310,6 +1512,8 @@ record 的宣告放在檔案最後面，這是 top-level statements 的規定：
 C# 的程式架構可以用 top-level statements 寫得很精簡；變數要注意型別，金額用 decimal；條件判斷除了 if，還有現代的 switch expression；迴圈最常用 foreach；類別用屬性來定義資料，primary constructor 和 record 讓程式更精簡。
 
 學完這一章，打開 ASP.NET Core 的程式碼，大部分的語法大家應該都看得懂了。
+
+EShop 在這一章有了商品、分類和會員折扣：類別用 required 和 field 關鍵字把關資料，record 裝試算結果，switch expression 讓折扣規則一目了然。我們也寫下了第一個單元測試，之後改程式都有安全網。
 
 下一章我們會介紹 LINQ，這是 C# 最有特色的功能，可以用幾行程式碼完成篩選、排序、分組，而且之後查詢資料庫也是用同樣的寫法。
 -->

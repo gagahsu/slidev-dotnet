@@ -61,10 +61,13 @@ layout: default
 - **4-3 MVC 職責** — 三個角色各自負責什麼
 - **4-4 MVC 架構** — 一個請求的完整旅程
 - **4-5 .NET 中的 MVC** — Routing、Action、IActionResult、Razor、Tag Helper
+- **EShop 專案實作** — 第 4 步：前台商品列表與詳情頁
 - **總結**
 
 <!--
 這一章有五個小節，觀念比較多，但每個觀念後面都會有程式碼驗證。學完這一章，下一章我們就能直接動手做 CRUD 了。
+
+最後的 EShop 專案實作，我們會替 EShop 做出第一個真正的網頁：商品列表與詳情頁。
 -->
 
 ---
@@ -971,6 +974,176 @@ Data 是自己寫的一個 static 類別，放模擬資料。下一章開始，�
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# EShop 專案實作
+## 第 4 步：前台商品列表與詳情頁
+
+<!--
+回到 EShop。前三章我們寫了商品模型和查詢服務，但顧客完全看不到，因為還沒有畫面。
+
+這一章學了 MVC，現在 Model 有了，查詢的邏輯也有了，我們只要再加上 Controller 和 View，EShop 就有第一個真正的商品頁面。
+-->
+
+---
+
+# EShop 第 4 步：前台商品列表與詳情頁
+### 任務說明
+
+1. 建立 `ProductsController`，用 **Attribute Routing** 設定網址：
+
+| 網址 | Action | 說明 |
+| --- | --- | --- |
+| `/products?keyword=…&categoryId=…&sort=…&page=…` | `Index` | 呼叫上一步的 `Search`，所有條件都可省略 |
+| `/products/{id:int}` | `Details` | 找不到商品回傳 `NotFound()`（404） |
+
+2. `Index` View：搜尋表單（關鍵字、分類、排序）、商品卡片（售完顯示徽章）、分頁連結
+3. 分頁連結要**保留目前的搜尋條件**；導覽列加上「商品」連結
+4. 補充：用 `WebApplicationFactory` 寫整合測試，驗證 200 / 404 與 `X-EShop-Version` 標頭
+
+<!--
+第四步要做兩個頁面：商品列表和商品詳情。
+
+網址我們用這一章補充介紹的 Attribute Routing 來設計，列表是 /products，詳情是 /products/ 加上商品編號。id 後面的冒號 int 是路由條件，只有數字才會對應到這個 Action。
+
+列表頁的搜尋、分類、排序、分頁，全部交給上一步寫好的 Search。大家會發現 Controller 只要幾行，因為查詢邏輯早就寫好了，這就是 MVC 分工的好處。
+
+分頁連結有個小細節：點第二頁的時候，關鍵字和分類不能不見，所以連結上要帶著目前的條件。
+
+最後一項是補充，我們會用整合測試，真的發出 HTTP 請求來檢查網站。
+-->
+
+---
+
+# EShop 第 4 步：解題提示
+### ProductsController
+
+```csharp
+// eshop/EShop.Web/Controllers/ProductsController.cs
+[Route("products")]
+public class ProductsController : Controller
+{
+    private readonly ProductQueryService _catalog =
+        new(SeedData.Products, SeedData.Categories);
+
+    // GET /products?keyword=衣索比亞&categoryId=1&sort=PriceAsc&page=2
+    [HttpGet("")]
+    public IActionResult Index(ProductQuery query)
+    {
+        ViewData["Query"] = query;
+        ViewData["Categories"] = _catalog.GetCategories();
+        return View(_catalog.Search(query));
+    }
+
+    // GET /products/4
+    [HttpGet("{id:int}")]
+    public IActionResult Details(int id)
+    {
+        var product = _catalog.GetById(id);
+        if (product is null)
+        {
+            return NotFound();
+        }
+        return View(product);
+    }
+```
+
+<!--
+Controller 上的 Route 設定了共同的前綴 products，Index 的 HttpGet 是空字串，所以網址就是 /products；Details 的 HttpGet 是 {id:int}，網址是 /products/4。
+
+Index 的參數直接寫 ProductQuery。Model Binding 會自動把網址上的 keyword、categoryId、sort、page，對應到 record 的同名參數，沒給的就用預設值。這就是為什麼上一步要把查詢條件設計成一個 record。
+
+查詢條件和分類清單用 ViewData 傳給 View，商品結果當成 Model 傳過去。Details 找不到商品就回傳 NotFound，瀏覽器會收到 404。
+
+目前 _catalog 是 Controller 自己 new 出來的，下一章學了依賴注入，我們會把它改掉。
+-->
+
+---
+class: code-sm
+---
+
+# EShop 第 4 步：解題提示（續）
+### 搜尋表單與分頁連結
+
+```razor
+@* eshop/EShop.Web/Views/Products/Index.cshtml *@
+<form asp-action="Index" method="get" class="row g-2 mb-3">
+    <div class="col-md-4">
+        <input name="keyword" value="@query.Keyword" class="form-control"
+               placeholder="搜尋名稱或產地" />
+    </div>
+@* ... *@
+    <div class="col-md-3">
+        <select name="sort" class="form-select" asp-for="@query.Sort"
+                asp-items="Html.GetEnumSelectList<ProductSort>()">
+        </select>
+    </div>
+@* ... *@
+        @for (var i = 1; i <= Model.TotalPages; i++)
+        {
+            <li class="page-item @(i == Model.Page ? "active" : "")">
+                <a class="page-link" asp-action="Index" asp-route-page="@i"
+                   asp-route-keyword="@query.Keyword"
+                   asp-route-categoryId="@query.CategoryId"
+                   asp-route-sort="@query.Sort">@i</a>
+            </li>
+        }
+```
+
+<!--
+View 的重點有三個。
+
+第一，搜尋表單用 method="get"，送出之後條件會出現在網址上，例如 ?keyword=衣索比亞，這樣搜尋結果可以加入書籤，也可以分享給朋友。
+
+第二，排序的下拉選單用 asp-items 搭配 Html.GetEnumSelectList，會自動把 ProductSort 這個 enum 變成選項，選項文字來自 enum 上的 Display 屬性。
+
+第三，分頁連結用 Tag Helper 的 asp-route 開頭屬性，每一個都會變成網址上的參數。這樣點第二頁時，關鍵字、分類、排序都會一起帶過去。產生出來的網址長這樣：/products?page=2&categoryId=1&sort=PriceDesc。
+-->
+
+---
+
+# EShop 第 4 步：解題提示（續 2）
+### 補充：整合測試
+
+```csharp
+// eshop/EShop.Tests/ProductsPageTests.cs
+// 整合測試：在記憶體中啟動整個網站，用 HttpClient 發出請求
+public class ProductsPageTests(WebApplicationFactory<Program> factory)
+    : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly HttpClient _client = factory.CreateClient();
+
+    [Fact]
+    public async Task 每個回應都有版本標頭()
+    {
+        var response = await _client.GetAsync("/");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("1.0", response.Headers.GetValues("X-EShop-Version").Single());
+    }
+// ...
+    [Fact]
+    public async Task 商品詳情_找不到回傳404()
+    {
+        var response = await _client.GetAsync("/products/99");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+```
+
+<!--
+單元測試只能測一個類別，但路由、Controller、View 要串在一起才看得出有沒有問題。這時候就要用整合測試。
+
+先在測試專案加入 Microsoft.AspNetCore.Mvc.Testing 套件。WebApplicationFactory 會在記憶體裡把整個網站啟動起來，包括第一章寫的 Middleware，然後給我們一個 HttpClient，就像瀏覽器一樣發出請求。
+
+第一個測試檢查首頁回傳 200，而且有 X-EShop-Version 標頭，等於把第一步的 Middleware 也測到了。最後一個測試請求一個不存在的商品，預期拿到 404。
+
+小提醒：Razor 預設會把中文編碼成 &#x 開頭的字元，比對 HTML 內容之前，要先用 WebUtility.HtmlDecode 解碼。
+-->
+
+---
 
 # 總結
 
@@ -981,6 +1154,7 @@ Data 是自己寫的一個 static 類別，放模擬資料。下一章開始，�
 | 4-3 MVC 職責 | Controller 保持精簡、View 不查資料庫、Model 不管畫面 |
 | 4-4 MVC 架構 | 請求 → Routing → Controller → Model → View → HTML |
 | 4-5 .NET 中的 MVC | `AddControllersWithViews`、路由樣板、`IActionResult`、Razor `@`、Tag Helper `asp-` |
+| **EShop** 第 4 步 | `ProductsController`（Attribute Routing、`NotFound()`）、Tag Helper 搜尋表單與分頁、`WebApplicationFactory` 整合測試 |
 
 下一章我們會介紹 **CRUD 實作練習**，用 Entity Framework Core 連線資料庫，完成分類管理的新增、查詢、修改、刪除。
 
@@ -988,6 +1162,8 @@ Data 是自己寫的一個 static 類別，放模擬資料。下一章開始，�
 我們來總結這一章。
 
 MVC 把程式分成三個角色，各司其職。ASP.NET Core 用約定優於設定，只要照命名規則放檔案，框架就找得到。一個請求會經過 Routing 找到 Controller，Controller 取得資料後交給 View，View 用 Razor 產生 HTML。
+
+EShop 在這一章有了第一個真正的網頁：顧客可以搜尋、篩選、排序、翻頁，也能看商品詳情。Controller 只有短短幾行，因為查詢邏輯早就寫在 Model 那一層，這就是 MVC 分工的好處。我們也寫了第一個整合測試，真的發出 HTTP 請求來檢查網站。
 
 這一章的資料都是用 static List 模擬的，重新啟動網站資料就不見了。下一章我們會介紹 Entity Framework Core，把資料存到真正的資料庫，並完成第一個完整的 CRUD 功能。
 -->

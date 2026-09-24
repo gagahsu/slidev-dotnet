@@ -63,12 +63,15 @@ layout: default
 - **7-3 建立泛型 Repository（封裝 LINQ 查詢）**
 - **7-4 建立 UnitOfWork 工作單元模式**
 - **7-5 建立 Area 區分前台與後台**
+- **EShop 專案實作** — 第 7 步：自己的程式碼也搬進分層架構
 - **總結**
 
 <!--
 這一章有五個小節。第一節是觀念，第二節是搬家，把現有的程式碼搬到新的專案結構。第三、四節是這一章的核心：Repository 和 UnitOfWork。第五節用 Area 區分前後台。
 
 這一章的程式碼改動比較多，建議大家每做完一個小節，就確認網站還能正常執行，再進行下一節。
+
+最後的 EShop 專案實作，我們要把前幾章自己加的程式碼也搬進分層架構，並在後台加上營運總覽。
 -->
 
 ---
@@ -1222,6 +1225,159 @@ UnitOfWork 多了一個 Announcement 屬性，同樣傳入同一個 db。前台 
 -->
 
 ---
+layout: section
+class: flex flex-col justify-center items-center text-center
+---
+
+# EShop 專案實作
+## 第 7 步：自己的程式碼也搬進分層架構
+
+<!--
+回到 EShop。講義這一章把分類管理搬進了四個專案，但我們的 EShop 從第一章開始，還加了很多講義沒有的東西：Middleware、會員折扣、商品目錄、前台商品頁、運費試算……
+
+搬家的時候不能只搬講義的部分。這一步我們要替每一個檔案找到它該住的那一層，再利用新的後台 Area，加一個營運總覽頁面。
+-->
+
+---
+
+# EShop 第 7 步：自己的程式碼也搬進分層架構
+### 任務說明
+
+1. 完成本章的重構（四個專案、`SD`、Repository、UnitOfWork、Admin / Customer Area），再把前幾章的程式碼搬家：
+
+| 程式碼 | 搬到 |
+| --- | --- |
+| `Product`、`MemberLevel`、`CartLine`、`ProductQuery`、`PagedResult<T>` | `EShop.Models` |
+| `SeedData`、`IProductCatalog`、`InMemoryProductCatalog` | `EShop.DataAccess/Catalog` |
+| `ProductsController`、`CheckoutController`（含 View） | `EShop.Web/Areas/Customer` |
+| `PriceCalculator`、`IShippingService` 與兩家物流 | `EShop.Web/Services`（不動） |
+
+2. 前台商品頁的網址維持 `/products`
+3. 在 **Admin** Area 新增「營運總覽」`/Admin/Dashboard`：顯示資料庫的分類數量，以及商品目錄的分類統計表
+4. 用 SQLite 直接測試 Repository 與 UnitOfWork（不經過網站）
+
+<!--
+第七步的第一件事是搬家，表格是搬家清單。
+
+判斷的原則就是這一章教的分層：只裝資料、沒有邏輯的類別放 Models；負責取得資料的放 DataAccess，所以商品目錄雖然還在記憶體，也算是資料存取；和網頁有關的 Controller、View 留在 Web。PriceCalculator 和運費服務只有 Web 在用，所以不動。
+
+第二件事，商品頁搬進 Customer Area 之後，網址還是要維持 /products，不能讓顧客的書籤失效。
+
+第三件事是新功能：後台的營運總覽。它同時用到 UnitOfWork 和商品目錄，正好練習一個 Controller 注入兩個不同層的服務。
+
+最後，分層之後資料存取層可以單獨測試，不用啟動整個網站。
+-->
+
+---
+
+# EShop 第 7 步：解題提示
+### Area 裡的 Attribute Routing、營運總覽
+
+```csharp
+// eshop/EShop.Web/Areas/Customer/Controllers/ProductsController.cs
+namespace EShop.Web.Areas.Customer.Controllers;
+
+[Area("Customer")]
+[Route("products")]
+public class ProductsController(IProductCatalog catalog, IShippingService shipping)
+    : Controller
+```
+
+```csharp
+// eshop/EShop.Web/Areas/Admin/Controllers/DashboardController.cs
+// 後台營運總覽：同時用到資料庫（UnitOfWork）與商品目錄
+[Area("Admin")]
+public class DashboardController(IUnitOfWork unitOfWork, IProductCatalog catalog)
+    : Controller
+{
+    public async Task<IActionResult> Index()
+    {
+        var categories = await unitOfWork.Category.GetAllAsync();
+        ViewData["CategoryCount"] = categories.Count;
+        return View(catalog.GetCategorySummaries());
+    }
+}
+```
+
+<!--
+ProductsController 搬家之後，namespace 改成 Areas.Customer.Controllers，再加上 Area 標籤。
+
+大家可能會擔心：路由樣板改成 {area=Customer} 開頭之後，/products 還有用嗎？答案是有。Attribute Routing 的網址是寫在 Controller 上的，不受 MapControllerRoute 的樣板影響，Area 只是多一個路由值，產生連結的時候會用到。
+
+DashboardController 放在 Admin Area，建構子同時注入 IUnitOfWork 和 IProductCatalog：分類數量從資料庫查，分類統計用第三章寫的 GetCategorySummaries。View 用一個表格把統計結果列出來，導覽列的「後台管理」選單也要加上「營運總覽」。
+-->
+
+---
+
+# EShop 第 7 步：解題提示（續）
+### 單獨測試資料存取層
+
+```csharp
+// eshop/EShop.Tests/RepositoryTests.cs
+    [Fact]
+    public async Task GetAllAsync_篩選與排序都在資料庫執行()
+    {
+        var unitOfWork = new UnitOfWork(_testDb.CreateContext());
+
+        var categories = await unitOfWork.Category.GetAllAsync(
+            filter: c => c.DisplayOrder >= 2,
+            orderBy: q => q.OrderByDescending(c => c.DisplayOrder));
+
+        Assert.Equal(["配方豆", "精品咖啡豆"], categories.Select(c => c.Name));
+    }
+
+    [Theory]
+    [InlineData("配方豆", 0, true)]    // 新增：和既有分類重複
+    [InlineData("配方豆", 3, false)]   // 編輯自己：不算重複
+    [InlineData("濾掛咖啡", 0, false)]
+    public async Task IsNameExistsAsync_檢查名稱是否重複(
+```
+
+<!--
+分層的好處之一，就是每一層都可以單獨測試。
+
+這裡直接 new 一個 UnitOfWork，把 SQLite 的 DbContext 傳進去，完全不需要啟動網站。第一個測試驗證泛型 Repository 的 GetAllAsync：篩選顯示順序大於等於 2 的分類，再由大到小排序，結果應該是配方豆、精品咖啡豆。
+
+第二個測試用 Theory 驗證講義的 IsNameExistsAsync，三組資料分別是：新增時重複、編輯自己不算重複、全新的名稱。
+
+還有一個測試示範 UnitOfWork 的精神：Add 之後、SaveAsync 之前，資料庫裡的分類還是三筆；呼叫 SaveAsync 之後才變成四筆。
+-->
+
+---
+
+# EShop 第 7 步：解題提示（續 2）
+### 前台與後台都能開啟
+
+```csharp
+// eshop/EShop.Tests/AreaPageTests.cs
+    [Theory]
+    [InlineData("/")]                      // 預設 Area 是 Customer
+    [InlineData("/Customer/Home/Privacy")]
+    [InlineData("/products")]              // attribute route 在 Area 中照樣運作
+    [InlineData("/Admin/Category")]
+    [InlineData("/Admin/Dashboard")]
+    public async Task 前台與後台頁面都能開啟(string url)
+    {
+        var response = await _client.GetAsync(url);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+```
+
+```bash
+dotnet ef migrations add ChangeProjectStructure \
+    --project EShop.DataAccess --startup-project EShop.Web
+```
+
+<!--
+最後用一個整合測試，把前台和後台的主要網址都打一遍，確認搬家之後沒有任何頁面壞掉。
+
+大家注意第一個網址是斜線：路由樣板的 area 預設值是 Customer，所以首頁會對應到 Customer Area 的 HomeController。/products 在 Area 裡照樣運作，後台的網址前面要加上 /Admin。
+
+搬家之後，Migration 檔案也搬到了 DataAccess 專案，記得指令要加上 --project 和 --startup-project。這次模型沒有變，所以產生出來的 ChangeProjectStructure 是空的，但它會更新模型快照，讓之後的 Migration 從新的 namespace 開始。
+-->
+
+---
 
 # 總結
 
@@ -1232,6 +1388,7 @@ UnitOfWork 多了一個 Announcement 屬性，同樣傳入同一個 db。前台 
 | 7-3 泛型 Repository | `IRepository<T>` 封裝 LINQ；filter 用 `Expression`；不在 Repository 存檔 |
 | 7-4 UnitOfWork | 集中所有 Repository，共用同一個 DbContext，`SaveAsync()` 一次存檔 |
 | 7-5 Area | `[Area("Admin")]`、路由加 `{area=Customer}`、連結加 `asp-area` |
+| **EShop** 第 7 步 | 前幾章的程式碼依分層搬家；`/products` 移進 Customer Area；Admin 營運總覽；Repository 單獨測試 |
 
 下一章我們會介紹 **Product 商品管理與首頁**，在這個架構上建立商品、圖片上傳與前台首頁。
 
@@ -1239,6 +1396,8 @@ UnitOfWork 多了一個 Announcement 屬性，同樣傳入同一個 db。前台 
 我們來總結這一章。
 
 我們把 EShop 拆成四個專案，建立了泛型 Repository 封裝 LINQ 查詢，用 UnitOfWork 集中管理 Repository 並一次存檔，最後用 Area 把網站分成前台和後台。
+
+EShop 在這一章完成了第一次大搬家：不只講義的分類管理，我們前幾章自己寫的商品目錄、前台商品頁、運費服務，也都依照分層放到了該去的地方。後台多了營運總覽，資料存取層也可以單獨測試了。
 
 現在 EShop 的骨架已經完整了。下一章我們會在這個架構上建立商品管理，包括商品和分類的關聯、ViewModel、圖片上傳、DataTable，最後完成前台首頁的商品展示。
 -->

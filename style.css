@@ -60,3 +60,11 @@ code, pre, .shiki, .shiki * {
 .slidev-layout .slidev-code-wrapper {
   max-width: none !important;
 }
+
+/* 程式碼行比較長的投影片：在 frontmatter 加上 class: code-sm，縮小程式碼字級
+   （zoom 只會等比例縮小，程式碼區塊一行能放的字數不會變多；penguin 主題的程式碼字級固定 14px，
+   只改 pre 的字級沒有用，要直接指定 code 與 .line） */
+.slidev-layout.code-sm pre code,
+.slidev-layout.code-sm pre code .line {
+  font-size: 12px !important;
+}
