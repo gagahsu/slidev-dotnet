@@ -1,0 +1,59 @@
+@model ProductVM
+@{
+    var isEdit = Model.Product.Id != 0;
+    ViewData["Title"] = isEdit ? "編輯商品" : "新增商品";
+}
+
+<h2>@(isEdit ? "編輯商品" : "新增商品")</h2>
+<form method="post" enctype="multipart/form-data">
+    <input asp-for="Product.Id" type="hidden" />
+    <input asp-for="Product.ImageUrl" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="mb-3">
+        <label asp-for="Product.Name" class="form-label"></label>
+        <input asp-for="Product.Name" class="form-control" />
+        <span asp-validation-for="Product.Name" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Product.Origin" class="form-label"></label>
+        <input asp-for="Product.Origin" class="form-control" />
+        <span asp-validation-for="Product.Origin" class="text-danger"></span>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label asp-for="Product.Price" class="form-label"></label>
+            <input asp-for="Product.Price" class="form-control" />
+            <span asp-validation-for="Product.Price" class="text-danger"></span>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="Product.Stock" class="form-label"></label>
+            <input asp-for="Product.Stock" class="form-control" />
+            <span asp-validation-for="Product.Stock" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Product.Description" class="form-label"></label>
+        <textarea asp-for="Product.Description" class="form-control" rows="3"></textarea>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Product.CategoryId" class="form-label"></label>
+        <select asp-for="Product.CategoryId" asp-items="Model.CategoryList" class="form-select">
+            <option disabled selected>-- 請選擇分類 --</option>
+        </select>
+        <span asp-validation-for="Product.CategoryId" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">商品圖片</label>
+        <input type="file" name="file" class="form-control" accept="image/*" />
+        @if (!string.IsNullOrEmpty(Model.Product.ImageUrl))
+        {
+            <img src="@Model.Product.ImageUrl" class="img-thumbnail mt-2" style="max-width: 200px" />
+        }
+    </div>
+    <button type="submit" class="btn btn-primary">@(isEdit ? "更新" : "建立")</button>
+    <a asp-action="Index" class="btn btn-secondary">返回列表</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

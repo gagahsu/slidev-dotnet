@@ -1,0 +1,21 @@
+@{
+    ViewData["Title"] = "分店管理";
+}
+
+<div class="d-flex justify-content-between mb-3">
+    <h2>分店管理</h2>
+    <a asp-action="Upsert" class="btn btn-primary">＋ 新增分店</a>
+</div>
+<table id="tblStore" class="table table-bordered table-striped w-100">
+    <thead>
+        <tr><th>分店名稱</th><th>縣市</th><th>地址</th><th>電話</th><th></th></tr>
+    </thead>
+</table>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.bootstrap5.min.css" />
+    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/js/store.js" asp-append-version="true"></script>
+}
