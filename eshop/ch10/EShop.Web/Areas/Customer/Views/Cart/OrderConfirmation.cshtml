@@ -1,0 +1,11 @@
+@model OrderHeader
+@{
+    ViewData["Title"] = "訂單成立";
+}
+
+<div class="text-center py-5">
+    <h1 class="display-5">🎉 訂單成立！</h1>
+    <p class="fs-5">訂單編號 <b>#@Model.Id.ToString("D6")</b>，總計 NT$ @((Model.OrderTotal + Model.ShippingFee).ToString("N0"))</p>
+    <p class="text-muted">我們會盡快為您處理，出貨後將通知您。</p>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">繼續購物</a>
+</div>

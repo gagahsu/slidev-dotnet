@@ -1,0 +1,54 @@
+@model ShoppingCartVM
+@{
+    ViewData["Title"] = "結帳";
+}
+
+<form method="post">
+    <div class="row g-4">
+        <div class="col-md-6">
+            <h4>收件資訊</h4>
+            <div class="mb-2">
+                <label asp-for="OrderHeader.Name" class="form-label"></label>
+                <input asp-for="OrderHeader.Name" class="form-control" />
+                <span asp-validation-for="OrderHeader.Name" class="text-danger"></span>
+            </div>
+            <div class="mb-2">
+                <label asp-for="OrderHeader.PhoneNumber" class="form-label"></label>
+                <input asp-for="OrderHeader.PhoneNumber" class="form-control" />
+                <span asp-validation-for="OrderHeader.PhoneNumber" class="text-danger"></span>
+            </div>
+            <div class="mb-2">
+                <label asp-for="OrderHeader.City" class="form-label"></label>
+                <input asp-for="OrderHeader.City" class="form-control" />
+                <span asp-validation-for="OrderHeader.City" class="text-danger"></span>
+            </div>
+            <div class="mb-2">
+                <label asp-for="OrderHeader.StreetAddress" class="form-label"></label>
+                <input asp-for="OrderHeader.StreetAddress" class="form-control" />
+                <span asp-validation-for="OrderHeader.StreetAddress" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <h4>訂單摘要</h4>
+            <ul class="list-group mb-3">
+                @foreach (var c in Model.CartList)
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>@c.Product?.Name × @c.Count</span><span>NT$ @c.Subtotal.ToString("N0")</span>
+                    </li>
+                }
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>運費</span><span>NT$ @Model.Shipping.ToString("N0")</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between fw-bold">
+                    <span>總計</span><span class="text-primary">NT$ @Model.AmountDue.ToString("N0")</span>
+                </li>
+            </ul>
+            <button type="submit" class="btn btn-success w-100">確認下單</button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

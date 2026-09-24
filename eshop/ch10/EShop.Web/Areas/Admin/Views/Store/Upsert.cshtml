@@ -1,0 +1,37 @@
+@model Store
+@{
+    var isEdit = Model.Id != 0;
+    ViewData["Title"] = isEdit ? "編輯分店" : "新增分店";
+}
+
+<h2>@ViewData["Title"]</h2>
+<form method="post">
+    <input asp-for="Id" type="hidden" />
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label asp-for="City" class="form-label"></label>
+            <input asp-for="City" class="form-control" />
+            <span asp-validation-for="City" class="text-danger"></span>
+        </div>
+        <div class="col-md-8 mb-3">
+            <label asp-for="StreetAddress" class="form-label"></label>
+            <input asp-for="StreetAddress" class="form-control" />
+            <span asp-validation-for="StreetAddress" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label asp-for="PhoneNumber" class="form-label"></label>
+        <input asp-for="PhoneNumber" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-primary">@(isEdit ? "更新" : "建立")</button>
+    <a asp-action="Index" class="btn btn-secondary">返回列表</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

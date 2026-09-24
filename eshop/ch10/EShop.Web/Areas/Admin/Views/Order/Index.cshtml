@@ -1,0 +1,25 @@
+@{
+    ViewData["Title"] = "訂單管理";
+    var status = Context.Request.Query["status"].ToString();
+}
+
+<h2>訂單管理</h2>
+<ul class="nav nav-pills mb-3">
+    <li class="nav-item"><a class="nav-link @(status == "" ? "active" : "")" asp-route-status="">全部</a></li>
+    @foreach (var s in new[] { SD.StatusPending, SD.StatusProcessing, SD.StatusShipped, SD.StatusCompleted, SD.StatusCancelled })
+    {
+        <li class="nav-item">
+            <a class="nav-link @(status == s ? "active" : "")" asp-route-status="@s">@SD.GetStatusText(s)</a>
+        </li>
+    }
+</ul>
+<table id="tblOrder" class="table table-bordered w-100">
+    <thead><tr><th>#</th><th>收件人</th><th>Email</th><th>下單時間</th><th>金額</th><th>狀態</th><th></th></tr></thead>
+</table>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.bootstrap5.min.css" />
+    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.bootstrap5.min.js"></script>
+    <script src="~/js/order.js" asp-append-version="true"></script>
+}

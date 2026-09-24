@@ -1,0 +1,27 @@
+@model Product
+@inject EShop.Web.Services.IShippingService Shipping
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<div class="row">
+    <div class="col-md-5">
+        <img src="@(Model.ImageUrl ?? "/images/no-image.png")" class="img-fluid rounded" alt="@Model.Name" />
+    </div>
+    <div class="col-md-7">
+        <span class="badge bg-secondary">@Model.Category?.Name</span>
+        <h2 class="mt-2">@Model.Name</h2>
+        <p class="text-muted">產地：@Model.Origin ｜ 庫存：@Model.Stock</p>
+        <p class="fs-3 fw-bold text-primary">NT$ @Model.Price.ToString("N0")</p>
+        <p>@Model.Description</p>
+        <div class="alert alert-info">
+            運費試算：單買一包，@Shipping.Name 運費 @Shipping.Calculate(Model.Price) 元
+        </div>
+        <form asp-action="AddToCart" method="post" class="d-flex gap-2 my-3" style="max-width: 320px">
+            <input type="hidden" name="productId" value="@Model.Id" />
+            <input type="number" name="count" value="1" min="1" max="@Model.Stock" class="form-control" />
+            <button type="submit" class="btn btn-primary text-nowrap">🛒 加入購物車</button>
+        </form>
+        <a asp-action="Index" class="btn btn-secondary">← 繼續逛逛</a>
+    </div>
+</div>

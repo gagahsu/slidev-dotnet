@@ -1,0 +1,21 @@
+@{
+    ViewData["Title"] = "商品管理";
+}
+
+<div class="d-flex justify-content-between mb-3">
+    <h2>商品管理</h2>
+    <a asp-action="Upsert" class="btn btn-primary">＋ 新增商品</a>
+</div>
+<table id="tblData" class="table table-bordered table-striped w-100">
+    <thead>
+        <tr><th>商品名稱</th><th>分類</th><th>產地</th><th>售價</th><th>庫存</th><th></th></tr>
+    </thead>
+</table>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.bootstrap5.min.css" />
+    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/js/product.js" asp-append-version="true"></script>
+}

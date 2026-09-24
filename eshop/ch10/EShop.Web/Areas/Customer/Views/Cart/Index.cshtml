@@ -1,0 +1,36 @@
+@model ShoppingCartVM
+@{
+    ViewData["Title"] = "我的購物車";
+}
+
+<h2>🛒 我的購物車</h2>
+@if (!Model.CartList.Any())
+{
+    <div class="alert alert-info">購物車是空的，<a asp-controller="Home" asp-action="Index">去逛逛</a></div>
+}
+else
+{
+    <table class="table align-middle">
+        <thead><tr><th>商品</th><th class="text-end">單價</th><th class="text-center">數量</th><th class="text-end">小計</th><th></th></tr></thead>
+        @foreach (var c in Model.CartList)
+        {
+            <tr>
+                <td><img src="@(c.Product?.ImageUrl ?? "/images/no-image.png")" width="50" /> @c.Product?.Name</td>
+                <td class="text-end">@c.Product?.Price.ToString("N0")</td>
+                <td class="text-center">
+                    <form method="post" class="d-inline-flex align-items-center gap-2">
+                        <button asp-action="Minus" asp-route-cartId="@c.Id" class="btn btn-sm btn-outline-secondary">−</button>
+                        <span>@c.Count</span>
+                        <button asp-action="Plus" asp-route-cartId="@c.Id" class="btn btn-sm btn-outline-secondary">＋</button>
+                    </form>
+                </td>
+                <td class="text-end">@c.Subtotal.ToString("N0")</td>
+                <td>
+                    <form method="post"><button asp-action="Remove" asp-route-cartId="@c.Id" class="btn btn-sm btn-outline-danger">移除</button></form>
+                </td>
+            </tr>
+        }
+    </table>
+    <div class="text-end fs-4">總計：<b class="text-primary">NT$ @Model.OrderTotal.ToString("N0")</b></div>
+    <div class="text-end mt-3"><a asp-action="Summary" class="btn btn-success">前往結帳 →</a></div>
+}

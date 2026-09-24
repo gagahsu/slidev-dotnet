@@ -1,0 +1,61 @@
+@model OrderVM
+@{
+    ViewData["Title"] = $"訂單 #{Model.OrderHeader.Id:D6}";
+    var h = Model.OrderHeader;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>@ViewData["Title"]</h2>
+    <span class="badge fs-6 @SD.GetStatusBadge(h.OrderStatus)">@SD.GetStatusText(h.OrderStatus)</span>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-5">
+        <h5>收件資訊</h5>
+        <dl class="row">
+            <dt class="col-4">收件人</dt><dd class="col-8">@h.Name</dd>
+            <dt class="col-4">電話</dt><dd class="col-8">@h.PhoneNumber</dd>
+            <dt class="col-4">地址</dt><dd class="col-8">@h.City @h.StreetAddress</dd>
+            <dt class="col-4">Email</dt><dd class="col-8">@h.ApplicationUser?.Email</dd>
+            <dt class="col-4">下單時間</dt><dd class="col-8">@h.OrderDate.ToString("yyyy/MM/dd HH:mm")</dd>
+            <dt class="col-4">物流</dt><dd class="col-8">@h.Carrier @h.TrackingNumber</dd>
+        </dl>
+    </div>
+    <div class="col-md-7">
+        <h5>訂單明細</h5>
+        <table class="table">
+            <thead><tr><th>商品</th><th class="text-end">單價</th><th class="text-end">數量</th><th class="text-end">小計</th></tr></thead>
+            @foreach (var d in Model.OrderDetails)
+            {
+                <tr>
+                    <td>@d.Product?.Name</td>
+                    <td class="text-end">@d.Price.ToString("N0")</td>
+                    <td class="text-end">@d.Count</td>
+                    <td class="text-end">@((d.Price * d.Count).ToString("N0"))</td>
+                </tr>
+            }
+            <tr><td colspan="3" class="text-end">運費</td><td class="text-end">@h.ShippingFee.ToString("N0")</td></tr>
+            <tr class="fw-bold"><td colspan="3" class="text-end">總計</td><td class="text-end">NT$ @((h.OrderTotal + h.ShippingFee).ToString("N0"))</td></tr>
+        </table>
+    </div>
+</div>
+
+<form method="post" class="d-flex gap-2">
+    <input asp-for="OrderHeader.Id" type="hidden" />
+    @if (Model.OrderHeader.OrderStatus == SD.StatusPending)
+    {
+        <button asp-action="StartProcessing" asp-route-id="@Model.OrderHeader.Id" class="btn btn-info">開始處理</button>
+    }
+    @if (Model.OrderHeader.OrderStatus == SD.StatusProcessing)
+    {
+        <input asp-for="OrderHeader.Carrier" class="form-control" placeholder="物流商" />
+        <input asp-for="OrderHeader.TrackingNumber" class="form-control" placeholder="追蹤碼" />
+        <button asp-action="ShipOrder" class="btn btn-primary">出貨</button>
+    }
+    @if (Model.OrderHeader.OrderStatus is SD.StatusPending or SD.StatusProcessing)
+    {
+        <button asp-action="CancelOrder" asp-route-id="@Model.OrderHeader.Id" class="btn btn-outline-danger"
+                onclick="return confirm('確定取消這筆訂單？')">取消訂單</button>
+    }
+    <a asp-action="Index" class="btn btn-secondary ms-auto">返回列表</a>
+</form>
